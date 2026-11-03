@@ -1,0 +1,34 @@
+# Cours, annales et documents sous droits d'auteur
+*.pdf
+
+# Fichiers liés aux assistants IA
+.claude/
+TP1/.claude/
+CLAUDE.md
+AGENTS.md
+TP1/CLAUDE.md
+TP1/AGENTS.md
+TP1/skills-import.tgz
+
+# Obsidian : état de l'interface
+.obsidian/workspace.json
+.obsidian/workspaces.json
+.obsidian/cache
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+Rplots.pdf
+*.Rproj
+
+# Sorties générées et temporaires
+*.png
+*.html
+*.tex
+*.log
+*_files/
+*.tmp
+~$*
+.DS_Store
+Thumbs.db
