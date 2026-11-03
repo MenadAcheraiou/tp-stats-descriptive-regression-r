@@ -38,4 +38,4 @@ Les tableaux s'affichent dans la console ; les figures sont enregistrées dans `
 
 ## Auteurs
 
-Menad Acheraiou et son binôme, M1.
+Menad Acheraiou et Belgacem Smaali, M1.
