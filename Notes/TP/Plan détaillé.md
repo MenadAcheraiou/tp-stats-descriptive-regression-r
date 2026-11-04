@@ -10,9 +10,9 @@ Source : [[TPMLSD.pdf]] · contexte : [[TP/TP - Consignes]] · rapport : [[TP/Ra
 Convention : `S<phase>.<n°>` · (Qn) = numéro de question du sujet · `→` = livrable · `✔` = vérification.
 
 ## Phase 0 — Préparation
-- [ ] **S0.01** Relire le sujet et lister les contraintes (20 p. max, PDF, script exécutable, déclaration IA). → liste validée à deux · ✔ rien d'omis par rapport à `TPMLSD.pdf`
+- [x] **S0.01** Relire le sujet et lister les contraintes (20 p. max, PDF, script exécutable, déclaration IA). → liste validée à deux · ✔ rien d'omis par rapport à `TPMLSD.pdf`
 - [ ] **S0.02** Installer/vérifier R (+ `MASS`, `ggplot2`/`dplyr` si utilisés) et lancer les deux scripts existants tels quels. → état de référence · ✔ `Rscript tp_partie1.R` et `tp_partie2.R` tournent sans erreur
-- [ ] **S0.03** Choisir le format du rapport (`.Rmd` ou `.qmd` rendu en PDF, ou Word/LaTeX exporté en PDF) et fixer le gabarit. → squelette vide qui compile en PDF · ✔ PDF généré avec page de garde et sommaire
+- [x] **S0.03** Choisir le format du rapport (`.Rmd` ou `.qmd` rendu en PDF, ou Word/LaTeX exporté en PDF) et fixer le gabarit. → squelette vide qui compile en PDF · ✔ PDF généré avec page de garde et sommaire
 - [ ] **S0.04** Répartir le travail entre les deux membres du binôme. → qui fait quoi · ✔ chacun peut expliquer toutes les parties à la fin
 
 ## Phase 1 — Partie 1 : Recensement
@@ -69,7 +69,7 @@ Convention : `S<phase>.<n°>` · (Qn) = numéro de question du sujet · `→` = 
 - [ ] **S3.02** Page de garde, sommaire et déclaration d'usage de l'IA (outil + nature exacte de l'aide). → pages 1–2 · ✔ déclaration conforme à [[TP/Déclaration IA]]
 - [ ] **S3.03** Introduction (objectif, deux jeux de données, plan). → ~0,5 p. · ✔ contexte historique 2012 et 1970 rappelé
 - [ ] **S3.04** Données et méthodes (fonctions R, règles de qualité, population analysée). → section · ✔ cohérent avec le script
-- [ ] **S3.05** Résultats commentés, Partie 1. → section · ✔ figures/tableaux numérotés, titrés, avec unités, commentés
+- [x] **S3.05** Résultats commentés, Partie 1. → section · ✔ figures/tableaux numérotés, titrés, avec unités, commentés
 - [ ] **S3.06** Résultats commentés, Partie 2. → section · ✔ idem
 - [ ] **S3.07** Discussion critique (limites, causalité, données anciennes, variables omises). → section · ✔ aucune phrase causale
 - [ ] **S3.08** Conclusion et bibliographie. → fin du rapport · ✔ sources citées

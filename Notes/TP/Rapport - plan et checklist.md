@@ -10,3 +10,8 @@ Plan étape par étape : [[TP/Plan détaillé]]. Trame détaillée : [[trame_rap
 - [ ] script R reproduit tout
 - [ ] déclaration d'usage de l'IA
 - [ ] chacun sait expliquer méthodes et code
+
+## État de la rédaction
+- Partie 1 rédigée dans `rapport.Rmd` (environ 9 pages, chiffres calculés dans le Rmd). À relire et s'approprier par le binôme avant rendu.
+- Reste à rédiger : introduction, Partie 2, conclusion, bibliographie, annexes.
+- Déclaration d'usage de l'IA : gérée par Menad, volontairement absente du Rmd.

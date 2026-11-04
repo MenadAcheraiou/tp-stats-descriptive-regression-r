@@ -18,6 +18,8 @@ header-includes:
   - \usepackage{lmodern}
   - \usepackage{float}
   - \floatplacement{figure}{H}
+  - \usepackage{etoolbox}
+  - \AtBeginDocument{\renewcommand{\tablename}{Tableau}\renewcommand{\figurename}{Figure}}
 ---
 
 ```{r setup, include=FALSE}
@@ -46,106 +48,509 @@ tab <- function(df, cap, ...) knitr::kable(df, caption = cap, booktabs = TRUE, .
 
 # Partie 1 : Recensement (CPS, 2012)
 
+```{r p1-prep, include=FALSE}
+# Mise en forme des nombres cités dans le texte (virgule décimale)
+fr <- function(x, k = 1) formatC(x, format = "f", digits = k, decimal.mark = ",", big.mark = " ")
+pc <- function(x, k = 1) fr(100 * x, k)
+# tableau fixé à sa place (H) et en petite police
+petit <- function(k, size = "small") {
+  k[] <- sub("\\centering", paste0("\\centering\\", size, "\\setlength{\\tabcolsep}{4pt}"), k, fixed = TRUE); k }
+kab <- function(df, cap, size = "small", ...) petit(tab(df, cap, format = "latex", position = "H", linesep = "", ...), size)
+
+vars <- setdiff(names(d), "ETUDES")          # les 11 variables du fichier
+d0 <- d[vars]
+n1 <- nrow(d)
+s <- d$SAL_HOR
+levels(d$ETUDES) <- c("Secondaire ou moins", "Postsec. sans bachelor", "Bachelor",
+                      "Master", "École spécifique", "Doctorat")
+d3 <- subset(d, CATEGORIE %in% c(1, 2, 5)); d3$CATEGORIE <- factor(d3$CATEGORIE)
+lib3 <- c("1 (gestion)", "2 (libérale)", "5 (bureau)")
+moy_par <- function(y, g) tapply(y, g, mean)
+med_par <- function(y, g) tapply(y, g, median)
+# rapport de corrélation : variance inter-groupes / variance totale
+eta2 <- function(y, g) { nk <- tapply(y, g, length)
+  sum(nk * (tapply(y, g, mean) - mean(y))^2) / sum((y - mean(y))^2) }
+```
+
 ## Données et méthodes
 
-Le fichier contient `r nrow(d)` individus (une ligne par individu) et `r ncol(d)` variables.
-Importation avec `read.table()` ; qualité contrôlée par des règles documentées, sans suppression
-d'observations (voir les résultats de la Partie 1).
+### Vue d'ensemble
 
-*À rédiger : fonctions R utilisées, type de chaque variable, regroupements retenus et leur justification.*
+Les données viennent de l'enquête américaine *Current Population Survey* (CPS) de juillet 2012.
+Ce sont des données historiques : elles décrivent le marché du travail de 2012 et non la situation
+actuelle. Le fichier `Recensement.txt` est importé avec `read.table()` (séparateur tabulation, ligne
+d'en-tête). Il contient `r n1` lignes et `r length(vars)` variables, et chaque ligne est un individu :
+l'unité statistique est la personne enquêtée. Le sujet ne précise pas comment ces personnes ont été
+choisies. Nous ne présentons donc pas l'échantillon comme représentatif de la population américaine :
+tous les résultats portent sur ces `r n1` individus. Le fichier ne contient ni nom ni adresse, ce qui
+permet d'afficher les premières lignes sans risque d'identification (tableau \ref{tab:head}). Tous
+les tableaux, chiffres et figures de cette partie sont régénérés par le script `tp_partie1.R` et par
+ce document R Markdown.
+
+```{r head}
+# aucune variable identifiante (nom, adresse) : affichage possible
+kab(head(d0, 5), paste0("Cinq premières lignes du fichier Recensement.txt (n = ", n1, ")"), size = "scriptsize", row.names = FALSE)
+```
+
+Fonctions R utilisées : `read.table()` (import), `dim()`, `head()`, `str()`, `class()` (structure),
+`is.na()`, `duplicated()`, `unique()` (contrôles), `table()`, `prop.table()` (effectifs et fréquences,
+globales ou conditionnelles), `cut()` (regroupement des codes), `subset()` (catégories 1, 2 et 5),
+`mean()`, `median()`, `sd()`, `var()`, `quantile()`, `IQR()` (position et dispersion), `aggregate()`,
+`tapply()` (indicateurs par groupe), `barplot()`, `hist()`, `boxplot()`, `plot()` (graphiques), `ecdf()`
+(fonction de répartition), `cor()` et `lowess()` (corrélation et courbe de tendance).
+
+### Dictionnaire des variables
+
+```{r dico}
+obs_quali <- function(v) { t <- table(v); paste(names(t), t, collapse = ", ") }
+obs_quanti <- function(v) paste(fr(min(v), 0), "à", fr(max(v), 0))
+dico <- data.frame(
+  Variable = gsub("_", "\\\\_", vars),
+  Signification = c("âge (années)", "sexe", "région", "statut marital", "salaire horaire (\\$/h)",
+                    "syndiqué", "catégorie prof.", "niveau d'études",
+                    "taille du foyer", "enfants du foyer", "revenu annuel du foyer"),
+  `Type statistique` = c("quanti. discrète", "quali. nominale", "quali. nominale", "quali. nominale",
+                         "quanti. continue", "quali. nominale (binaire)", "quali. nominale (codes)",
+                         "quali. ordinale (codes)", "quanti. discrète", "quanti. discrète",
+                         "quali. ordinale (classes)"),
+  `Type R` = sapply(d0, class),
+  NA_ = colSums(is.na(d0)),
+  Distinctes = sapply(d0, function(v) length(unique(v))),
+  `Modalités ou étendue observées` = sapply(d0, function(v)
+    if (is.character(v)) obs_quali(v) else obs_quanti(v)),
+  check.names = FALSE, row.names = NULL)
+names(dico)[5] <- "Manquants"
+kab(dico, paste0("Dictionnaire et contrôle des variables (n = ", n1, ")"), size = "scriptsize", escape = FALSE)
+```
+
+Le tableau \ref{tab:dico} met en regard le type statistique et le type R ; les deux ne coïncident
+pas toujours. NIV_ETUDES est stocké en entier, mais ses codes de `r min(d$NIV_ETUDES)` à
+`r max(d$NIV_ETUDES)` ne mesurent pas une quantité : l'écart entre deux codes n'a pas de sens. Ils
+suivent en revanche l'ordre des diplômes, ce qui en fait une variable qualitative ordinale. Nous ne
+calculons donc jamais de moyenne des codes. CATEGORIE est aussi un entier, mais ses
+`r length(unique(d$CATEGORIE))` codes désignent des métiers sans ordre naturel : c'est une variable
+nominale codée, traitée comme un facteur. REV_FOYER est à l'origine un revenu, donc une grandeur
+continue, mais le fichier ne donne que la classe (de 1 à `r max(d$REV_FOYER)`) : on la traite comme
+une variable ordinale en classes. SAL_HOR est continue (`r length(unique(s))` valeurs distinctes,
+avec des centimes) ; AGE, NB_PERS et NB_ENF sont des comptages entiers.
+
+La région est codée `r paste(sort(unique(d$REGION)), collapse = ", ")` dans le fichier, alors que le
+sujet annonce MW : aucune ligne ne porte ce code (`r sum(d$REGION == "MW")` cas). Nous gardons le
+codage du fichier, NW tenant la place de la modalité MW du sujet. Les contrôles de base ne révèlent rien :
+`r sum(is.na(d0))` valeur manquante sur l'ensemble du fichier et `r sum(duplicated(d0))` ligne en
+double (`duplicated()`).
+
+### Règles de contrôle et population analysée
+
+```{r regles}
+seuil <- list(age_min = 16, age_max = 80, majeur = 18, sal_min = 7.25, sal_max = 75, foyer = 10)
+regles <- list(d$AGE < seuil$age_min | d$AGE > seuil$age_max, d$AGE < seuil$majeur, s <= 0,
+               s < seuil$sal_min, s > seuil$sal_max, d$NB_ENF >= d$NB_PERS, d$NB_PERS > seuil$foyer)
+nb_regle <- sapply(regles, sum)
+t_regles <- data.frame(
+  `Règle` = c(paste("AGE <", seuil$age_min, "ou >", seuil$age_max, "ans"),
+            paste("AGE <", seuil$majeur, "ans"), "SAL\\_HOR $\\leq$ 0",
+            paste("SAL\\_HOR <", fr(seuil$sal_min, 2), "\\$/h"),
+            paste("SAL\\_HOR >", seuil$sal_max, "\\$/h"), "NB\\_ENF $\\geq$ NB\\_PERS",
+            paste("NB\\_PERS >", seuil$foyer)),
+  Justification = c("hors de l'étendue annoncée", "mineur en emploi, possible mais à repérer",
+                    "salaire impossible", "sous le salaire minimum fédéral de 2012",
+                    "très haut salaire, à vérifier", "un foyer compte au moins un adulte",
+                    "foyer exceptionnellement grand"),
+  `Cas signalés` = nb_regle, check.names = FALSE)
+kab(t_regles, paste0("Règles de contrôle : nombre de cas signalés, aucune suppression (n = ", n1, ")"),
+    escape = FALSE)
+sal_ok <- !is.na(s) & s > 0
+stopifnot(all(sal_ok))
+signal <- regles[[4]] | regles[[5]]
+```
+
+Le tableau \ref{tab:regles} applique sept règles. Une valeur suspecte n'est pas forcément fausse :
+aucune ligne n'est supprimée. Les `r nb_regle[2]` personnes de moins de `r seuil$majeur` ans
+peuvent travailler légalement. Les `r nb_regle[4]` salaires inférieurs au minimum fédéral (de
+`r fr(min(s), 2)` à `r fr(max(s[regles[[4]]]), 2)` \$/h) peuvent venir d'emplois à pourboires ou de
+cas exemptés. Les `r nb_regle[5]` salaires au-dessus de `r seuil$sal_max` \$/h valent
+`r paste(sort(s[regles[[5]]]), collapse = " et ")` \$/h : un cadre peut gagner autant, mais une valeur
+ronde comme `r max(s)` pourrait aussi être un plafond de saisie, ce que le dictionnaire fourni ne
+permet pas de vérifier. Le foyer de `r max(d$NB_PERS)` personnes est rare, pas impossible.
+
+Le salaire est renseigné et strictement positif pour tous les individus (`r sum(sal_ok)` valides,
+`r sum(!sal_ok)` exclu). La population analysée pour SAL_HOR est donc l'échantillon complet,
+n = `r sum(sal_ok)`. Ce choix pèse peu sur le centre de la distribution : sans les
+`r sum(signal)` salaires signalés (bas et hauts), la moyenne passerait de `r fr(mean(s), 2)` à
+`r fr(mean(s[!signal]), 2)` \$/h, et la médiane `r if (median(s) == median(s[!signal])) paste("resterait à", fr(median(s), 0)) else paste("passerait de", fr(median(s), 1), "à", fr(median(s[!signal]), 1))` \$/h.
 
 ## Résultats
 
-### Importation et qualité des données
-
-```{r controle}
-controle <- data.frame(Variable = names(d), `Type R` = sapply(d, class),
-                       NA_ = colSums(is.na(d)), Modalités = sapply(d, function(v) length(unique(v))),
-                       check.names = FALSE, row.names = NULL)
-names(controle)[3] <- "Manquants"
-tab(controle, paste0("Contrôle des variables du fichier Recensement.txt (n = ", nrow(d), ")"))
-```
-
-*À rédiger : types statistiques (cas discutables NIV_ETUDES, CATEGORIE, REV_FOYER), règles de contrôle
-(âge, salaire, enfants, taille du foyer), population analysée pour SAL_HOR, modalité NW du fichier
-(l'énoncé annonce MW), impact possible des choix.*
-
 ### Décrire la population
 
-```{r freq-sexe}
-f <- function(v) { t <- table(v); data.frame(Modalité = names(t), Effectif = as.vector(t),
-                   `Fréquence (%)` = round(100 * as.vector(prop.table(t)), 1), check.names = FALSE) }
-tab(f(d$SEXE), paste0("Répartition par sexe (n = ", nrow(d), ")"))
+```{r freq}
+fq <- function(v, nom) { t <- table(d[[v]])
+  data.frame(Variable = c(nom, rep("", length(t) - 1)), `Modalité` = names(t), n = as.vector(t),
+             `%` = fr(100 * as.vector(prop.table(t))), check.names = FALSE) }
+t_g <- rbind(fq("SEXE", "Sexe"), fq("SYNDICAT", "Syndicat"), fq("REGION", "Région"),
+             fq("STAT_MARI", "Statut marital"))
+t_d <- fq("CATEGORIE", "Catégorie")
+petit(knitr::kable(list(t_g, t_d), booktabs = TRUE, row.names = FALSE, position = "H", linesep = "",
+      caption = paste0("Effectifs et fréquences (\\%) ; dénominateur commun n = ", n1, " individus")))
+pct <- function(v, m) 100 * mean(d[[v]] == m)
 ```
 
-```{r fig-categories, fig.cap="Effectifs par catégorie professionnelle (individus), n = 599"}
-par(mar = c(4, 4, 1, 1))
-barplot(sort(table(d$CATEGORIE)), horiz = TRUE, las = 1, col = "steelblue",
-        xlab = "Effectif (individus)", ylab = "Catégorie professionnelle")
+Toutes les fréquences du tableau \ref{tab:freq} ont le même dénominateur, les `r n1` individus, puisque
+aucune valeur ne manque. L'échantillon est équilibré entre femmes (`r sum(d$SEXE == "F")`, soit
+`r fr(pct("SEXE", "F"))` %) et hommes (`r sum(d$SEXE == "M")`). Le Sud regroupe
+`r fr(pct("REGION", "S"))` % des personnes, les trois autres régions entre `r fr(min(prop.table(table(d$REGION))) * 100)` et
+`r fr(sort(prop.table(table(d$REGION)))[3] * 100)` %. Un peu plus de la moitié des enquêtés sont
+codés M (`r fr(pct("STAT_MARI", "M"))` %), et `r fr(pct("SYNDICAT", "oui"))` % sont syndiqués. Les
+catégories 2 et 3 sont les plus nombreuses (`r fr(pct("CATEGORIE", 2))` et `r fr(pct("CATEGORIE", 3))` %).
+La catégorie 6 ne compte que `r sum(d$CATEGORIE == 6)` personnes : toute statistique calculée sur
+elle serait fragile.
+
+```{r fig-pop, fig.cap=paste0("Effectifs par catégorie professionnelle, triés (à gauche) et répartition par région en \\% (à droite), n = ", n1), fig.height=2.7}
+par(mfrow = c(1, 2), mar = c(4, 4, 1, 1))
+barplot(sort(table(d$CATEGORIE)), horiz = TRUE, las = 1, col = "steelblue", border = NA,
+        xlab = "Effectif (individus)", ylab = "Catégorie (code)")
+barplot(100 * prop.table(table(d$REGION)), col = "grey60", border = NA,
+        xlab = "Région (code du fichier)", ylab = "Fréquence (%)")
 ```
 
-```{r fig-region, fig.cap="Répartition par région (fréquence en %), n = 599"}
-par(mar = c(4, 4, 1, 1))
-barplot(100 * prop.table(table(d$REGION)), col = "grey60", xlab = "Région", ylab = "Fréquence (%)")
+Pour des variables qualitatives, le diagramme en barres se lit mieux qu'un diagramme circulaire :
+l'œil compare des longueurs plus facilement que des angles. Pour les `r length(unique(d$CATEGORIE))`
+catégories (figure \ref{fig:fig-pop}, à gauche), le tri et les barres horizontales donnent le
+classement d'un coup d'œil et gardent les codes lisibles. Pour la région, l'axe en pourcentage permet
+de comparer des parts proches, comme NE (`r fr(pct("REGION", "NE"))` %) et NW
+(`r fr(pct("REGION", "NW"))` %), qu'un camembert rendrait presque identiques.
+
+```{r etudes-brut}
+t_brut <- table(d$NIV_ETUDES)
+kab(as.data.frame.matrix(t(as.matrix(t_brut)), row.names = "Effectif"),
+    paste0("Niveau d'études : codes d'origine de NIV\\_ETUDES (n = ", n1, ")"), size = "footnotesize")
 ```
 
-*À rédiger : tableaux pour REGION, STAT_MARI, SYNDICAT, CATEGORIE ; deux graphiques justifiés ;
-études (codes bruts puis regroupement) ; catégories 1, 2, 5 selon sexe et études (pourcentages
-conditionnels) ; deux différences marquantes et piège des effectifs bruts.*
+```{r etudes}
+t_et <- table(d$ETUDES)
+kab(data.frame(Groupe = names(t_et), Codes = c("32-39", "40-42", "43", "44", "45", "46"),
+               n = as.vector(t_et), `%` = fr(100 * as.vector(prop.table(t_et))), check.names = FALSE),
+    paste0("Niveau d'études regroupé (n = ", n1, ")"))
+```
+
+Les codes bruts (tableau \ref{tab:etudes-brut}) sont très inégaux : `r t_brut["39"]` personnes ont le
+code 39 et `r t_brut["40"]` le code 40, alors que les codes 32 à 38 comptent chacun entre
+`r min(t_brut[1:7])` et `r max(t_brut[1:7])` individus. À ce niveau de détail, les pourcentages
+porteraient sur des effectifs trop faibles. Nous reprenons le découpage du sujet (tableau \ref{tab:etudes}), qui respecte
+l'ordre des diplômes et rassemble les petits codes du secondaire. Les groupes « École spécifique »
+(`r t_et[5]` personnes) et « Doctorat » (`r t_et[6]`) restent séparés, comme dans le sujet, mais
+leurs statistiques sont anecdotiques. Une variante défendable les réunirait avec le master en un
+groupe « au-delà du bachelor » de `r sum(t_et[4:6])` personnes.
+
+```{r cond}
+p_sexe <- prop.table(table(d3$CATEGORIE, d3$SEXE), margin = 1)
+p_et <- prop.table(table(d3$CATEGORIE, d3$ETUDES), margin = 1)
+n3 <- table(d3$CATEGORIE)
+t_cond <- data.frame(`Catégorie` = lib3, n = as.vector(n3), fr(100 * p_sexe), fr(100 * p_et), row.names = NULL)
+names(t_cond)[-(1:2)] <- c("\\% F", "\\% M", "Sec.", "Postsec.", "Bach.", "Master", "École", "Doct.")
+kab(t_cond, paste0("Sexe puis niveau d'études selon la catégorie (\\% en ligne), n = ",
+                   sum(n3)), escape = FALSE)
+sup_bach <- rowSums(p_et[, 3:6])
+n_sexe3 <- table(d3$CATEGORIE, d3$SEXE)
+```
+
+Le tableau \ref{tab:cond} se lit en ligne : chaque catégorie fait 100 %, et les pourcentages sont
+conditionnels (part des femmes parmi les personnes de la catégorie, part de chaque niveau d'études
+parmi les personnes de la catégorie ; Sec., Postsec., Bach., École et Doct. désignent les six groupes
+du tableau \ref{tab:etudes}). Les catégories diffèrent sur deux points. Pour le sexe, la catégorie 5 (bureau) compte
+`r fr(100 * p_sexe["5", "F"])` % de femmes, contre `r fr(100 * p_sexe["1", "F"])` % dans la
+catégorie 1, alors que les femmes forment `r fr(pct("SEXE", "F"))` % de l'échantillon. Pour les études, `r fr(100 * sup_bach["2"])` % des membres de la catégorie 2 ont au moins un
+bachelor, contre `r fr(100 * sup_bach["5"])` % dans la catégorie 5, où le groupe postsecondaire sans
+bachelor domine (`r fr(100 * p_et["5", 2])` %). Les niveaux rares reposent sur de très petits
+effectifs : la catégorie 2 compte `r sum(d3$CATEGORIE == "2" & d3$ETUDES == "École spécifique")` personnes
+d'école spécifique et `r sum(d3$CATEGORIE == "2" & d3$ETUDES == "Doctorat")` de doctorat.
+
+Les effectifs bruts mèneraient ici à une erreur. La catégorie 2 compte plus de femmes
+(`r n_sexe3["2", "F"]`) que la catégorie 5 (`r n_sexe3["5", "F"]`) ; on pourrait en conclure qu'elle
+est plus féminisée. C'est l'inverse en proportion, parce que la catégorie 2 est plus grande
+(`r n3["2"]` contre `r n3["5"]` personnes). Le choix du dénominateur compte aussi : sans l'argument
+`margin`, `prop.table()` divise par le total des `r sum(n3)` individus des trois catégories, et les
+femmes de la catégorie 5 en représentent alors `r fr(100 * n_sexe3["5", "F"] / sum(n3))` %. Ce
+pourcentage global décrit la composition du sous-ensemble ; il ne permet pas de comparer les
+catégories entre elles.
 
 ### Distributions et indicateurs
 
-```{r hist-sal, fig.cap=paste0("Distribution du salaire horaire (en dollars par heure), n = ", sum(!is.na(d$SAL_HOR)))}
-hist(d$SAL_HOR, breaks = 20, col = "grey70", border = "white",
-     xlab = "Salaire horaire ($/h)", ylab = "Effectif", main = "")
+```{r indic}
+resume <- function(x) c(n = length(x), Moyenne = mean(x), `Médiane` = median(x), `Écart-type` = sd(x),
+                        Q1 = unname(quantile(x, .25)), Q3 = unname(quantile(x, .75)),
+                        Min = min(x), Max = max(x))
+ind <- t(sapply(d[c("AGE", "SAL_HOR", "NB_PERS", "NB_ENF")], resume))
+kab(data.frame(Variable = c("AGE (années)", "SAL\\_HOR (\\$/h)", "NB\\_PERS (personnes)",
+                            "NB\\_ENF (enfants)"),
+               n = ind[, 1], round(ind[, 2:8], 2), check.names = FALSE, row.names = NULL),
+    "Indicateurs de position et de dispersion (effectif valide n)", escape = FALSE)
+q1 <- quantile(s, .25); q3 <- quantile(s, .75)
 ```
 
-```{r fig-boxplot, fig.cap="Boîte à moustaches du salaire horaire (\\$/h), n = 599", fig.height=2.5}
-par(mar = c(4, 2, 1, 1))
-boxplot(d$SAL_HOR, horizontal = TRUE, xlab = "Salaire horaire ($/h)")
+Pour les quatre variables, l'effectif valide est de `r n1` (tableau \ref{tab:indic}). Nous donnons
+à la fois moyenne et médiane, écart-type et quartiles : la comparaison des deux centres renseigne sur
+la symétrie, et les quartiles résistent aux valeurs extrêmes. L'âge est à peu près symétrique
+(moyenne `r fr(mean(d$AGE), 2)` ans, médiane `r median(d$AGE)` ans). Pour NB_ENF, la médiane de
+`r median(d$NB_ENF)` dit seulement qu'une majorité de foyers n'a pas d'enfant
+(`r fr(100 * mean(d$NB_ENF == 0))` %) ; la moyenne (`r fr(mean(d$NB_ENF), 2)`) complète cette
+information pour une variable discrète à peu de valeurs.
+
+```{r fig-sal, fig.cap=paste0("Distribution du salaire horaire (\\$/h) : histogramme en classes de 5 \\$/h et boîte à moustaches, n = ", n1), fig.width=5.5, fig.height=2.8}
+layout(matrix(1:2), heights = c(3, 1.3))
+par(mar = c(1, 4, 1, 1))
+h5 <- hist(s, breaks = seq(0, 100, 5), col = "grey70", border = "white", xlim = c(0, 100),
+           xlab = "", ylab = "Effectif", main = "", xaxt = "n")
+par(mar = c(4, 4, 0, 1))
+boxplot(s, horizontal = TRUE, ylim = c(0, 100), xlab = "Salaire horaire ($/h)", frame = FALSE)
+classe_mod <- which.max(h5$counts)
 ```
 
-```{r fig-classes, fig.cap="Deux découpages en classes du salaire horaire (\\$/h)", fig.height=3.5}
-par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
-hist(d$SAL_HOR, breaks = 5, col = "grey60", xlab = "Salaire horaire ($/h)", ylab = "Effectif", main = "5 classes")
-hist(d$SAL_HOR, breaks = 40, col = "grey60", xlab = "Salaire horaire ($/h)", ylab = "Effectif", main = "40 classes")
+La distribution est nettement asymétrique à droite (figure \ref{fig:fig-sal}). La classe la plus
+fréquente est `r h5$breaks[classe_mod]`–`r h5$breaks[classe_mod + 1]` \$/h
+(`r h5$counts[classe_mod]` personnes), la moitié centrale des salaires tient entre
+`r fr(q1, 1)` et `r fr(q3, 0)` \$/h, puis une longue queue s'étire jusqu'à `r max(s)` \$/h. La boîte
+résume le centre et la dispersion, mais elle ne montre ni le mode ni la
+concentration des salaires sur des montants ronds. `r fr(100 * mean(s %% 1 == 0))` % des salaires
+sont des nombres entiers de dollars, et `r as.numeric(names(which.max(table(s))))` \$/h apparaît à lui seul
+`r max(table(s))` fois, ce que seul un histogramme fin fait apparaître.
+
+```{r fig-classes, fig.cap=paste0("Deux découpages du salaire horaire (\\$/h) : classes de 20 \\$/h (à gauche) et de 2 \\$/h (à droite), n = ", n1), fig.height=2.2}
+par(mfrow = c(1, 2), mar = c(4, 4, 0.5, 1))
+h20 <- hist(s, breaks = seq(0, 100, 20), col = "grey60", border = "white",
+            xlab = "Salaire horaire ($/h)", ylab = "Effectif", main = "")
+h2 <- hist(s, breaks = seq(0, 100, 2), col = "grey60", border = "white",
+           xlab = "Salaire horaire ($/h)", ylab = "Effectif", main = "")
 ```
 
-```{r fig-ecdf, fig.cap="Fonction de répartition empirique du salaire horaire (\\$/h)"}
-Fn <- ecdf(d$SAL_HOR)
+Le découpage change la lecture (figure \ref{fig:fig-classes}). Avec `r length(h20$counts)` classes
+de 20 \$/h, `r fr(100 * h20$counts[1] / n1)` % des individus tombent dans la première classe : on ne
+voit plus où se situe le mode, et la queue paraît se réduire à quelques barres. Avec
+`r length(h2$counts)` classes de 2 \$/h, des pics isolés apparaissent sur les montants ronds et le
+dessin devient irrégulier ; certaines classes ne contiennent qu'un ou deux individus. Un découpage
+intermédiaire, comme celui de la figure \ref{fig:fig-sal}, montre mieux la forme générale.
+
+```{r sensib, include=FALSE}
+sans2 <- s[-order(s, decreasing = TRUE)[1:2]]
+iqr <- IQR(s); moust <- c(q1 - 1.5 * iqr, q3 + 1.5 * iqr)
+atyp <- s < moust[1] | s > moust[2]
+```
+
+La moyenne du salaire horaire (`r fr(mean(s), 2)` \$/h) dépasse la médiane (`r fr(median(s), 0)` \$/h)
+de `r fr(mean(s) - median(s), 2)` \$/h, signe de l'asymétrie à droite : quelques salaires élevés
+tirent la moyenne vers le haut. La médiane décrit mieux le salaire « typique » de l'échantillon, la
+moyenne reste utile pour raisonner sur des totaux (une masse salariale, par exemple). Pour mesurer
+la sensibilité aux valeurs extrêmes, nous avons retiré les deux plus hauts salaires : la moyenne
+descend à `r fr(mean(sans2), 2)` \$/h, la médiane ne bouge pas (`r fr(median(sans2), 0)` \$/h).
+
+L'écart interquartile vaut `r fr(iqr, 1)` \$/h. La règle de 1,5 × IQR place les moustaches à
+`r fr(moust[1], 2)` et `r fr(moust[2], 2)` \$/h. La borne basse est négative, donc aucun salaire ne
+peut se trouver en dessous ; `r sum(atyp)` salaires dépassent la borne haute, de
+`r fr(min(s[atyp]), 0)` à `r max(s)` \$/h. Ces observations ne sont pas pour autant des erreurs : dans
+une distribution asymétrique, la règle signale des valeurs éloignées du centre, pas des valeurs
+fausses.
+Un salaire de `r fr(median(s[atyp]), 0)` \$/h (leur médiane) n'a rien d'invraisemblable pour un
+poste d'encadrement.
+Seuls les deux salaires supérieurs à `r seuil$sal_max` \$/h méritent la vérification décrite plus haut.
+
+```{r fig-ecdf, fig.cap=paste0("Fonction de répartition empirique du salaire horaire (\\$/h), n = ", n1), fig.width=5.5, fig.height=2.5}
+Fn <- ecdf(s); q90 <- quantile(s, 0.9); x_lu <- 15   # point lu sur le graphique
 par(mar = c(4, 4, 1, 1))
-plot(Fn, xlab = "Salaire horaire ($/h)", ylab = "F(x)", main = "")
-abline(v = 15, h = Fn(15), lty = 2)
+plot(Fn, xlab = "Salaire horaire ($/h)", ylab = "Proportion cumulée F(x)", main = "",
+     pch = NA, verticals = TRUE)
+abline(v = c(x_lu, q90), h = c(Fn(x_lu), 0.9), lty = 2, col = "grey40")
 ```
 
-*À rédiger : indicateurs (Q11), forme de la distribution, deux découpages, moyenne et médiane,
-IQR et valeurs atypiques, fonction de répartition empirique, variance avec $n$ et $n-1$.*
+La fonction de répartition (figure \ref{fig:fig-ecdf}) monte vite jusqu'à `r fr(q90, 0)` \$/h puis
+plafonne près de 1, ce qui traduit la même queue à droite. On y lit que F(`r x_lu`) =
+`r fr(Fn(x_lu), 3)` : `r fr(100 * Fn(x_lu))` % des individus gagnent au plus `r x_lu` \$/h. Dans l'autre sens,
+le quantile d'ordre 0,9 vaut `r fr(q90, 0)` \$/h : 90 % des salaires sont inférieurs ou égaux à
+ce montant. Les marches verticales sur les montants ronds rappellent l'accumulation déjà vue.
+
+```{r variance, include=FALSE}
+v_n1 <- var(s); v_n <- sum((s - mean(s))^2) / n1
+```
+
+La variance descriptive divise la somme des carrés des écarts à la moyenne par $n$ ; elle décrit la
+dispersion des valeurs observées. La variance corrigée divise par $n-1$ ; elle sert à estimer la
+variance d'une population dont l'échantillon serait tiré, sans biais. La fonction `var()` de R
+utilise $n-1$, dès qu'il y a au moins deux observations valides. Ici,
+`var(d$SAL_HOR)` donne `r fr(v_n1, 2)` et la version descriptive `r fr(v_n, 2)` (\$/h)². Le rapport
+entre les deux vaut $(n-1)/n$, soit un écart de `r fr(100 * (v_n1 - v_n) / v_n, 2)` % avec
+n = `r n1` : la distinction compte surtout pour de petits groupes.
 
 ### Comparer et interpréter
 
-```{r fig-cat-sal, fig.cap="Salaire horaire (\\$/h) selon la catégorie professionnelle (1, 2 et 5)"}
+```{r cat-sal}
+g <- d3$CATEGORIE
+t_cat <- data.frame(`Catégorie` = lib3, n = as.vector(table(g)), Moyenne = moy_par(d3$SAL_HOR, g),
+                    `Médiane` = med_par(d3$SAL_HOR, g), `Écart-type` = tapply(d3$SAL_HOR, g, sd),
+                    Q1 = tapply(d3$SAL_HOR, g, quantile, .25), Q3 = tapply(d3$SAL_HOR, g, quantile, .75),
+                    check.names = FALSE, row.names = NULL)
+kab(cbind(t_cat[1:2], round(t_cat[-(1:2)], 2)),
+    paste0("Salaire horaire (\\$/h) dans les catégories 1, 2 et 5 (n = ", nrow(d3), ")"))
+```
+
+```{r fig-cat-sal, fig.cap=paste0("Salaire horaire (\\$/h) selon la catégorie professionnelle (1, 2 et 5), n = ", nrow(d3)), fig.width=5.5, fig.height=2.6}
 par(mar = c(4, 4, 1, 1))
-boxplot(SAL_HOR ~ CATEGORIE, d3, xlab = "Catégorie professionnelle", ylab = "Salaire horaire ($/h)")
+boxplot(SAL_HOR ~ CATEGORIE, d3, names = paste0(lib3, ", n = ", table(g)), col = "grey85",
+        xlab = "Catégorie professionnelle", ylab = "Salaire horaire ($/h)", frame = FALSE, cex.axis = 0.8)
 ```
 
-```{r fig-etudes-sal, fig.cap="Salaire horaire (\\$/h) selon le niveau d'études regroupé", fig.height=4.5}
-par(mar = c(9, 4, 1, 1))
-boxplot(SAL_HOR ~ ETUDES, d, las = 2, xlab = "", ylab = "Salaire horaire ($/h)")
+Les catégories 1 et 2 ont la même médiane, `r fr(t_cat[["Médiane"]][1], 0)` \$/h, contre
+`r fr(t_cat[["Médiane"]][3], 0)` \$/h dans la catégorie 5 (tableau \ref{tab:cat-sal} et figure
+\ref{fig:fig-cat-sal}). La dispersion diffère plus encore que le centre : l'écart-type va de
+`r fr(t_cat[[5]][3], 1)` \$/h dans la catégorie 5 à `r fr(t_cat[[5]][1], 1)` \$/h dans la catégorie 1,
+et l'intervalle interquartile passe de `r fr(t_cat$Q3[3] - t_cat$Q1[3], 2)` à
+`r fr(t_cat$Q3[1] - t_cat$Q1[1], 2)` \$/h. Les salaires de bureau sont donc à la fois plus bas et
+plus homogènes. La catégorie 1 repose sur `r t_cat$n[1]` personnes seulement, et sa moyenne
+(`r fr(t_cat$Moyenne[1], 2)` \$/h) dépend beaucoup de quelques hauts salaires.
+
+```{r sexe-sal}
+ss <- function(df) c(n_F = sum(df$SEXE == "F"), moy_F = mean(df$SAL_HOR[df$SEXE == "F"]),
+                     med_F = median(df$SAL_HOR[df$SEXE == "F"]), n_M = sum(df$SEXE == "M"),
+                     moy_M = mean(df$SAL_HOR[df$SEXE == "M"]), med_M = median(df$SAL_HOR[df$SEXE == "M"]))
+t_sx <- rbind(ss(d), t(sapply(split(d3, d3$CATEGORIE), ss)))
+t_sx <- data.frame(Champ = c(paste0("Ensemble (n = ", n1, ")"), paste("Catégorie", lib3)),
+                   t_sx, row.names = NULL)
+t_sx[, c(3, 4, 6, 7)] <- round(t_sx[, c(3, 4, 6, 7)], 2)
+kab(t_sx, "Salaire horaire (\\$/h) selon le sexe, ensemble puis catégories 1, 2 et 5",
+    col.names = c("Champ", "n F", "Moyenne F", "Médiane F", "n M", "Moyenne M", "Médiane M"))
 ```
 
-```{r fig-age-sal, fig.cap="Salaire horaire (\\$/h) selon l'âge (années), avec tendance lowess"}
+Sur l'ensemble de l'échantillon, la médiane des hommes dépasse celle des femmes de
+`r fr(t_sx$med_M[1] - t_sx$med_F[1], 1)` \$/h et la moyenne de
+`r fr(t_sx$moy_M[1] - t_sx$moy_F[1], 2)` \$/h (tableau \ref{tab:sexe-sal}). À l'intérieur des
+catégories, la conclusion n'est pas la même partout. L'écart en faveur des hommes s'observe dans les
+catégories 1 et 2, où il atteint `r fr(t_sx$moy_M[3] - t_sx$moy_F[3], 2)` \$/h en moyenne pour la
+catégorie 2. Dans la catégorie 5, il s'inverse : la médiane des femmes (`r fr(t_sx$med_F[4], 2)` \$/h)
+dépasse celle des hommes (`r fr(t_sx$med_M[4], 2)` \$/h). L'écart global peut aussi refléter la
+composition des catégories : les femmes sont surreprésentées dans la catégorie 5, la moins payée des trois. Les
+effectifs par cellule sont faibles (`r t_sx$n_M[4]` hommes dans la catégorie 5), ce qui interdit de
+généraliser.
+
+```{r etudes-sal}
+ge <- d$ETUDES
+t_es <- data.frame(Groupe = levels(ge), n = as.vector(table(ge)),
+                   Moyenne = round(moy_par(s, ge), 2), `Médiane` = round(med_par(s, ge), 2),
+                   row.names = NULL)
+kab(t_es, paste0("Salaire horaire (\\$/h) selon le niveau d'études regroupé (n = ", n1, ")"))
+e2_et <- eta2(s, ge)
+```
+
+```{r fig-etudes-sal, fig.cap=paste0("Salaire horaire (\\$/h) selon le niveau d'études regroupé, n = ", n1), fig.width=5.5, fig.height=2.8}
+par(mar = c(4, 12, 1, 1))
+boxplot(SAL_HOR ~ ETUDES, d, horizontal = TRUE, las = 1, col = "grey85", frame = FALSE,
+        names = paste0(levels(ge), " (", table(ge), ")"), ylab = "", xlab = "Salaire horaire ($/h)")
+```
+
+La médiane du salaire augmente avec le niveau d'études, de `r fr(t_es[["Médiane"]][1], 1)` \$/h pour le
+secondaire ou moins à `r fr(t_es[["Médiane"]][3], 2)` \$/h pour le bachelor et `r fr(t_es[["Médiane"]][4], 1)`
+\$/h pour le master (tableau \ref{tab:etudes-sal}, figure \ref{fig:fig-etudes-sal}). Le doctorat
+affiche `r fr(t_es[["Médiane"]][6], 0)` \$/h, mais sur `r t_es$n[6]` personnes. Le rapport de corrélation
+vaut $\eta^2$ = `r fr(e2_et, 3)` : c'est la part de la variance totale du salaire qui est inter-groupes
+(il varie de 0, groupes de même moyenne, à 1, salaire constant dans chaque groupe), soit
+`r fr(100 * e2_et, 1)` % dans l'échantillon. C'est un indicateur purement descriptif. L'association est nette, mais
+elle ne prouve pas que le diplôme produit ces écarts : les plus diplômés peuvent aussi différer par leur métier, leur âge
+ou leur région, et rien ne permet ici de séparer ces facteurs.
+
+```{r fig-age-sal, fig.cap=paste0("Salaire horaire (\\$/h) selon l'âge (années), avec courbe de tendance lowess, n = ", n1), fig.width=5.5, fig.height=2.6}
 par(mar = c(4, 4, 1, 1))
-plot(d$AGE, d$SAL_HOR, pch = 16, col = "#00000055", xlab = "Âge (années)", ylab = "Salaire horaire ($/h)")
-lines(lowess(d$AGE, d$SAL_HOR), col = "red", lwd = 2)
+plot(d$AGE, d$SAL_HOR, pch = 16, col = "#00000040", xlab = "Âge (années)",
+     ylab = "Salaire horaire ($/h)", frame = FALSE)
+lw <- lowess(d$AGE, d$SAL_HOR)
+lines(lw, col = "firebrick", lwd = 2)
+ages_lus <- c(20, 45, 60)
+lw_at <- approx(lw$x, lw$y, xout = ages_lus, ties = mean)$y
+r_age <- cor(d$AGE, d$SAL_HOR)
 ```
 
-*À rédiger : catégories 1, 2, 5 ; sexe ; études ; âge ; syndicat ; trois constats chiffrés et deux limites.*
+Le nuage (figure \ref{fig:fig-age-sal}) est très dispersé. La courbe lowess, qui suit les moyennes
+locales du nuage, monte d'environ `r fr(lw_at[1], 0)` \$/h à `r ages_lus[1]` ans à `r fr(lw_at[2], 0)` \$/h vers `r ages_lus[2]` ans,
+puis progresse peu (`r fr(lw_at[3], 0)` \$/h à `r ages_lus[3]` ans). Le coefficient de corrélation
+linéaire est faible, r = `r fr(r_age, 3)`, en partie parce que la relation n'est pas une droite.
+Les données sont de plus transversales : elles comparent des personnes de générations
+différentes en 2012, pas l'évolution du salaire d'une même personne. La courbe repose enfin sur peu
+d'observations aux âges extrêmes.
 
+```{r synd}
+p_sy <- prop.table(table(d$CATEGORIE, d$SYNDICAT), margin = 1)
+n_cat <- table(d$CATEGORIE)
+t_sy <- rbind(n = as.vector(n_cat), `% syndiqués` = fr(100 * p_sy[, "oui"]))
+colnames(t_sy) <- names(n_cat)
+kab(as.data.frame(t_sy), paste0("Part de syndiqués selon la catégorie (\\% en ligne), n = ", n1))
+sy <- d$SYNDICAT
+sy3 <- with(d3, tapply(SAL_HOR, list(SYNDICAT, CATEGORIE), median))
+n_sy3 <- table(d3$SYNDICAT, d3$CATEGORIE)
+```
+
+La part de syndiqués varie de `r fr(100 * min(p_sy[, "oui"]))` % (catégorie
+`r names(which.min(p_sy[, "oui"]))`, n = `r n_cat[names(which.min(p_sy[, "oui"]))]`) à `r fr(100 * max(p_sy[, "oui"]))` % (catégorie
+`r names(which.max(p_sy[, "oui"]))`, n = `r n_cat[names(which.max(p_sy[, "oui"]))]`) pour une moyenne de `r fr(pct("SYNDICAT", "oui"))` %
+(tableau \ref{tab:synd}) ; ces extrêmes reposent sur de petits effectifs et se lisent avec prudence.
+Ici encore, les effectifs bruts tromperaient : la catégorie 2 compte le plus
+de syndiqués (`r table(d$CATEGORIE, sy)["2", "oui"]`), mais pas le taux le plus élevé. Sur
+l'ensemble, la médiane des syndiqués (`r fr(median(s[sy == "oui"]), 0)` \$/h, n =
+`r sum(sy == "oui")`) dépasse celle des non-syndiqués (`r fr(median(s[sy == "non"]), 0)` \$/h, n =
+`r sum(sy == "non")`). Dans la catégorie 2, la seule où les syndiqués sont assez nombreux
+(n = `r n_sy3["oui", "2"]`, contre `r n_sy3["non", "2"]` non-syndiqués), l'ordre s'inverse : `r fr(sy3["oui", "2"], 0)` \$/h contre
+`r fr(sy3["non", "2"], 0)` \$/h. Avec `r n_sy3["oui", "1"]` syndiqués dans la catégorie 1 et
+`r n_sy3["oui", "5"]` dans la catégorie 5, les données ne permettent pas de comparaison sérieuse.
+
+En résumé, le salaire horaire est très asymétrique : la moyenne
+(`r fr(mean(s), 2)` \$/h) dépasse la médiane (`r fr(median(s), 0)` \$/h) et `r sum(atyp)` valeurs
+dépassent la moustache haute. Il est associé au niveau d'études, avec une médiane qui passe de
+`r fr(t_es[["Médiane"]][1], 1)` à `r fr(t_es[["Médiane"]][3], 2)` \$/h entre le secondaire et le bachelor.
+L'écart entre hommes et femmes observé sur l'ensemble (`r fr(t_sx$med_M[1] - t_sx$med_F[1], 1)` \$/h
+de médiane) ne se retrouve pas dans toutes les catégories et s'inverse dans la catégorie 5. Ces
+résultats ont deux limites. L'échantillon de `r n1` personnes n'est pas décrit comme
+représentatif, et certains sous-groupes sont minuscules (`r min(t_es$n)` personnes pour l'école
+spécifique, `r t_sx$n_M[4]` hommes dans la catégorie 5). Des variables importantes
+manquent, comme la durée du travail ou l'ancienneté, et les données datent de 2012.
 
 ## Discussion critique de la Partie 1
 
-*À rédiger : différence observée et absence de causalité, deux variables de contexte, classes de
-REV_FOYER (discontinuité entre les classes 5 et 6 signalée, non corrigée) ; option Q26 éventuelle.*
+Une différence de salaire entre deux groupes ne prouve ni une discrimination ni un lien de cause à
+effet. Les groupes comparés diffèrent sur d'autres points que celui qui les définit, et ces
+différences de composition suffisent à créer ou à masquer un écart : la comparaison par sexe en donne
+un exemple, puisque l'écart global change de sens dans la catégorie 5. Établir une discrimination
+demanderait de comparer des personnes semblables sur tout le reste, ce qu'une enquête descriptive de
+ce type ne permet pas. Des variables absentes du fichier pourraient modifier les
+comparaisons : le temps de travail (temps partiel ou temps plein, heures supplémentaires),
+l'ancienneté dans l'emploi et le secteur (public ou privé).
+
+```{r rev}
+t_rev <- table(d$REV_FOYER)
+kab(rbind(n = as.vector(t_rev), `%` = fr(100 * as.vector(prop.table(t_rev)))) |>
+      as.data.frame() |> setNames(names(t_rev)),
+    paste0("Répartition des classes de REV\\_FOYER (n = ", n1, ")"), size = "footnotesize")
+stopifnot(setequal(unique(d$REV_FOYER), 1:16))
+bornes_dico <- c(12500, 14500, 15000, 20000)   # bornes des classes 5 et 6 dans le dictionnaire du sujet
+classe_med <- which(cumsum(prop.table(t_rev)) >= 0.5)[1]
+```
+
+Les classes de revenu du foyer décrivent une répartition ordonnée (tableau \ref{tab:rev}) : la classe
+médiane est la classe `r classe_med`, et les classes `r names(t_rev)[1]` à `r names(t_rev)[5]`
+réunissent `r fr(100 * sum(prop.table(t_rev)[1:5]))` % des foyers. Elles permettent aussi de comparer
+des groupes par leurs fréquences de classes. En revanche, elles empêchent de calculer exactement une
+moyenne, une variance ou un écart entre deux foyers : on ne connaît que l'intervalle, les classes n'ont
+pas toutes la même largeur et un code de classe n'est pas un montant. Il s'agit en outre d'un revenu
+de foyer, qu'on ne peut pas rapprocher directement du salaire horaire individuel.
+
+Le dictionnaire du sujet présente une discontinuité entre les classes 5 et 6 : la classe 5 va de
+`r fr(bornes_dico[1], 0)` à `r fr(bornes_dico[2], 0)` \$ et la classe 6 commence à
+`r fr(bornes_dico[3], 0)` \$ pour finir à `r fr(bornes_dico[4], 0)` \$. Un revenu compris entre
+`r fr(bornes_dico[2], 0)` et `r fr(bornes_dico[3], 0)` \$ n'aurait donc pas de classe. Nous avons
+vérifié les données : les `r length(t_rev)` classes sont toutes présentes, la classe 5 avec
+`r t_rev["5"]` foyers et la classe 6 avec `r t_rev["6"]`. Aucune classe ne manque : l'incohérence vient
+des bornes du dictionnaire, peut-être d'une erreur de saisie que seul le dictionnaire complet de la CPS
+permettrait de trancher. Nous n'avons rien corrigé, puisque l'analyse n'utilise que les codes.
+
+Nous n'avons pas traité l'option de comparaison avec un indicateur récent du BLS ou du Census Bureau :
+elle supposerait de vérifier le champ, les définitions et la période, et nous avons
+préféré consacrer la place à l'analyse des données de 2012.
+
 
 
 # Partie 2 : Régression sur Boston (1970)
