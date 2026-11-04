@@ -44,25 +44,19 @@ tab <- function(df, cap, ...) knitr::kable(df, caption = cap, booktabs = TRUE, .
 (enquête CPS de juillet 2012 ; recensement de 1970 pour Boston), le caractère **historique** et
 **descriptif** de l'étude, et le plan du rapport.
 
-# Données et méthodes
+# Partie 1 : Recensement (CPS, 2012)
 
-## Partie 1 : Recensement
+## Données et méthodes
 
 Le fichier contient `r nrow(d)` individus (une ligne par individu) et `r ncol(d)` variables.
 Importation avec `read.table()` ; qualité contrôlée par des règles documentées, sans suppression
-d'observations (voir 3.1).
+d'observations (voir les résultats de la Partie 1).
 
 *À rédiger : fonctions R utilisées, type de chaque variable, regroupements retenus et leur justification.*
 
-## Partie 2 : Boston
+## Résultats
 
-`MASS::Boston` : `r nrow(Boston)` secteurs. X = `lstat`, Y = `medv` (milliers de dollars).
-
-*À rédiger : méthodes (moindres carrés, `cor.test`, régressogramme, polynômes, AIC).*
-
-# Résultats : Partie 1 (Recensement)
-
-## Importation et qualité des données
+### Importation et qualité des données
 
 ```{r controle}
 controle <- data.frame(Variable = names(d), `Type R` = sapply(d, class),
@@ -76,7 +70,7 @@ tab(controle, paste0("Contrôle des variables du fichier Recensement.txt (n = ",
 (âge, salaire, enfants, taille du foyer), population analysée pour SAL_HOR, modalité NW du fichier
 (l'énoncé annonce MW), impact possible des choix.*
 
-## Décrire la population
+### Décrire la population
 
 ```{r freq-sexe}
 f <- function(v) { t <- table(v); data.frame(Modalité = names(t), Effectif = as.vector(t),
@@ -99,7 +93,7 @@ barplot(100 * prop.table(table(d$REGION)), col = "grey60", xlab = "Région", yla
 études (codes bruts puis regroupement) ; catégories 1, 2, 5 selon sexe et études (pourcentages
 conditionnels) ; deux différences marquantes et piège des effectifs bruts.*
 
-## Distributions et indicateurs
+### Distributions et indicateurs
 
 ```{r hist-sal, fig.cap=paste0("Distribution du salaire horaire (en dollars par heure), n = ", sum(!is.na(d$SAL_HOR)))}
 hist(d$SAL_HOR, breaks = 20, col = "grey70", border = "white",
@@ -127,7 +121,7 @@ abline(v = 15, h = Fn(15), lty = 2)
 *À rédiger : indicateurs (Q11), forme de la distribution, deux découpages, moyenne et médiane,
 IQR et valeurs atypiques, fonction de répartition empirique, variance avec $n$ et $n-1$.*
 
-## Comparer et interpréter
+### Comparer et interpréter
 
 ```{r fig-cat-sal, fig.cap="Salaire horaire (\\$/h) selon la catégorie professionnelle (1, 2 et 5)"}
 par(mar = c(4, 4, 1, 1))
@@ -147,12 +141,22 @@ lines(lowess(d$AGE, d$SAL_HOR), col = "red", lwd = 2)
 
 *À rédiger : catégories 1, 2, 5 ; sexe ; études ; âge ; syndicat ; trois constats chiffrés et deux limites.*
 
-## Recul critique
+
+## Discussion critique de la Partie 1
 
 *À rédiger : différence observée et absence de causalité, deux variables de contexte, classes de
 REV_FOYER (discontinuité entre les classes 5 et 6 signalée, non corrigée) ; option Q26 éventuelle.*
 
-# Résultats : Partie 2 (Boston)
+
+# Partie 2 : Régression sur Boston (1970)
+
+## Données et méthodes
+
+`MASS::Boston` : `r nrow(Boston)` secteurs. X = `lstat`, Y = `medv` (milliers de dollars).
+
+*À rédiger : méthodes (moindres carrés, `cor.test`, régressogramme, polynômes, AIC).*
+
+## Résultats
 
 ```{r nuage, fig.cap=paste0("Valeur médiane des logements (k\\$) selon lstat (%), n = ", nrow(Boston))}
 plot(x, y, pch = 16, col = "#00000066", xlab = "lstat (%)", ylab = "medv (k$)")
@@ -204,14 +208,13 @@ tab(data.frame(Modèle = names(mods), `R²` = round(sapply(mods, function(k) sum
 *À rédiger : nuage, droite (formules et `lm()`), corrélation et R², test de Pearson, valeurs ajustées,
 résidus (`sd(residuals)` et `sigma`), prévision, régressogramme, polynômes de degré 2 à 4 et AIC.*
 
-# Discussion critique
+## Discussion critique de la Partie 2
 
-*À rédiger : limites (données de 2012 et de 1970, échantillon, variables omises), distinction
-association / causalité, sensibilité aux valeurs extrêmes.*
+*À rédiger : limites des données de 1970 (plafond de medv à 50), absence de causalité, choix du modèle (AIC et complexité).*
 
 # Conclusion
 
-*À rédiger.*
+*À rédiger : bilan des deux parties et limites communes (données anciennes, analyses descriptives).*
 
 # Bibliographie
 
