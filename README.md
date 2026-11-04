@@ -19,11 +19,13 @@ Les analyses sont descriptives : elles ne permettent aucune conclusion causale.
 | `TP1/tp_partie1.R` | Script de la partie 1 |
 | `TP1/tp_partie2.R` | Script de la partie 2 |
 | `TP1/trame_rapport.md` | Trame du rapport |
+| `rapport.Rmd` | Rapport en R Markdown (Partie 1 rédigée ; introduction, Partie 2 et conclusion à venir) |
+| `apercu_rapport.pdf` | Aperçu du rapport rendu à partir de `rapport.Rmd` |
 | `Recensement.txt` | Données de la partie 1 |
 | `statdes.R` | Script R complémentaire |
 | `Notes/` | Notes de cours et du TP (coffre Obsidian) |
 
-Les supports de cours, les annales et l'énoncé (PDF) ne sont pas versionnés.
+Les supports de cours, les annales et l'énoncé (PDF) ne sont pas versionnés ; seul l'aperçu du rapport l'est.
 
 ## Exécution
 
@@ -35,6 +37,12 @@ Rscript TP1/tp_partie2.R
 ```
 
 Les tableaux s'affichent dans la console ; les figures sont enregistrées dans `figures/`.
+
+Pour produire le rapport en PDF (R, `rmarkdown` et une distribution LaTeX), depuis le dossier contenant `rapport.Rmd` et `Recensement.txt`, avec une locale UTF-8 :
+
+```bash
+Rscript -e 'rmarkdown::render("rapport.Rmd")'
+```
 
 ## Auteurs
 
