@@ -40,13 +40,20 @@ regles <- list(
 sapply(regles, sum)
 d[Reduce(`|`, regles[c("salaire_tres_haut", "foyer_plus_de_10")]), ]
 
-# Q5. Population analysée pour SAL_HOR : salaires valides et strictement positifs
+# Q5. Population analysée pour SAL_HOR : salaires valides (non NA) et strictement positifs
+# Ici les 599 individus le sont (0 NA, 0 salaire nul) : aucun n'est écarté, la
+# population analysée est donc l'échantillon complet. Le garde-fou ci-dessous le vérifie
+# et empêcherait de rédiger cette phrase si le fichier changeait.
 sal_ok <- !is.na(d$SAL_HOR) & d$SAL_HOR > 0
-sum(sal_ok)
+c(valides = sum(sal_ok), exclus = sum(!sal_ok))
+stopifnot(all(sal_ok))
+# Sensibilité (Q4-Q5) : les salaires < 7,25 $/h (17 cas) et > 75 $/h (2 cas) sont signalés,
+# pas supprimés ; ils peuvent être réels (temps partiel, pourboires, cadres) -> voir Q14-Q15.
 
 # ---- 1.2 Décrire la population ----
 
-# Q6. Effectifs et fréquences (dénominateur : n = 599 individus, aucune NA)
+# Q6. Effectifs et fréquences (dénominateur : n = nrow(d) = 599 individus, aucune NA)
+# Attention : la région est codée NE/NW/S/W dans le fichier (le sujet écrit MW).
 freq <- function(x) {
   t <- table(x)
   data.frame(modalite = names(t), effectif = as.vector(t),
@@ -63,19 +70,19 @@ dir.create("figures", showWarnings = FALSE)
 png("figures/fig_categories.png", width = 800, height = 500)
 barplot(sort(table(d$CATEGORIE)), horiz = TRUE, las = 1, col = "steelblue",
         xlab = "Effectif (individus)", ylab = "Catégorie professionnelle",
-        main = "Répartition par catégorie professionnelle (n = 599)")
+        main = paste0("Répartition par catégorie professionnelle (n = ", nrow(d), ")"))
 dev.off()
 png("figures/fig_region.png", width = 600, height = 450)
 barplot(100 * prop.table(table(d$REGION)), col = "grey60",
         ylab = "Fréquence (%)", xlab = "Région",
-        main = "Répartition par région (n = 599)")
+        main = paste0("Répartition par région (n = ", nrow(d), ")"))
 dev.off()
 
 # Q8. Niveaux d'études : codes d'origine puis regroupement (codes de l'énoncé)
 table(d$NIV_ETUDES)
 d$ETUDES <- cut(d$NIV_ETUDES, breaks = c(31, 39, 42, 43, 44, 45, 46),
                 labels = c("<=Secondaire", "Postsecondaire sans bachelor",
-                           "Bachelor", "Master", "Ecole specifique", "Doctorat"))
+                           "Bachelor", "Master", "École spécifique", "Doctorat"))
 freq(d$ETUDES)
 
 # Q9. Catégories 1, 2, 5 : pourcentages conditionnels
@@ -116,8 +123,9 @@ iqr; bornes
 atypiques <- d$SAL_HOR < bornes[1] | d$SAL_HOR > bornes[2]
 sum(atypiques); sort(d$SAL_HOR[atypiques])
 # sensibilité aux valeurs extrêmes : moyenne et médiane sans les 2 plus hauts salaires
-c(avec = mean(d$SAL_HOR), sans = mean(d$SAL_HOR[d$SAL_HOR < 90]))
-c(avec = median(d$SAL_HOR), sans = median(d$SAL_HOR[d$SAL_HOR < 90]))
+sans2 <- d$SAL_HOR[-order(d$SAL_HOR, decreasing = TRUE)[1:2]]
+c(avec = mean(d$SAL_HOR), sans = mean(sans2))
+c(avec = median(d$SAL_HOR), sans = median(sans2))
 
 # Q16. Fonction de répartition empirique du salaire horaire
 Fn <- ecdf(d$SAL_HOR)
@@ -179,4 +187,8 @@ aggregate(SAL_HOR ~ SYNDICAT + CATEGORIE, d3, function(x) round(c(n = length(x),
 # Classes 5 et 6 : bornes du dictionnaire initial 12 500-14 500 puis 15 000-20 000
 # -> trou apparent [14 500 ; 15 000] à vérifier avec le dictionnaire complet ;
 # effectifs par classe, aucune valeur exacte de revenu n'est calculable.
+# Contrôle : toutes les classes 1 à 16 sont présentes, y compris 5 (n=7) et 6 (n=19) ;
+# la discontinuité vient des bornes du dictionnaire, pas d'une classe manquante. Non corrigée.
+stopifnot(setequal(unique(d$REV_FOYER), 1:16))
 table(d$REV_FOYER)
+round(100 * prop.table(table(d$REV_FOYER)), 1)
