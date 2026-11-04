@@ -14,19 +14,19 @@ Fichier : [Recensement.txt](../../../Recensement.txt) · description : [[Descrip
 - Complétude vérifiée : **0 valeur manquante, 0 doublon, 0 salaire nul**.
 
 ## Dictionnaire des variables
-| Variable | Signification | Type statistique | Modalités / étendue observées |
-|---|---|---|---|
-| AGE | âge en années | quantitative discrète | 16 à 80, moyenne 41,9, médiane 42 |
-| SEXE | sexe | qualitative nominale | F 297 · M 302 |
-| REGION | région | qualitative nominale | NE 129 · **NW 122** · S 200 · W 148 |
-| STAT_MARI | statut marital | qualitative nominale | M 325 · C 193 · D 61 · S 14 · V 6 |
-| SAL_HOR | salaire horaire ($/h) | quantitative continue | 2 à 99, moyenne 17,9, médiane 15, écart-type 11,3 |
-| SYNDICAT | appartenance syndicale | qualitative nominale (binaire) | non 496 · oui 103 |
-| CATEGORIE | catégorie professionnelle | qualitative nominale (codes) | 1 à 10 |
-| NIV_ETUDES | niveau d'études | qualitative ordinale (codes) | 32 à 46 |
-| NB_PERS | taille du foyer | quantitative discrète | 1 à 13, médiane 3 |
-| NB_ENF | enfants du foyer | quantitative discrète | 0 à 6, médiane 0 |
-| REV_FOYER | classe de revenu annuel du foyer | qualitative ordinale (classes) | 1 à 16 |
+| Variable   | Signification                    | Type statistique               | Modalités / étendue observées                     |
+| ---------- | -------------------------------- | ------------------------------ | ------------------------------------------------- |
+| AGE        | âge en années                    | quantitative discrète          | 16 à 80, moyenne 41,9, médiane 42                 |
+| SEXE       | sexe                             | qualitative nominale           | F 297 · M 302                                     |
+| REGION     | région                           | qualitative nominale           | NE 129 · **NW 122** · S 200 · W 148               |
+| STAT_MARI  | statut marital                   | qualitative nominale           | M 325 · C 193 · D 61 · S 14 · V 6                 |
+| SAL_HOR    | salaire horaire ($/h)            | quantitative continue          | 2 à 99, moyenne 17,9, médiane 15, écart-type 11,3 |
+| SYNDICAT   | appartenance syndicale           | qualitative nominale (binaire) | non 496 · oui 103                                 |
+| CATEGORIE  | catégorie professionnelle        | qualitative nominale (codes)   | 1 à 10                                            |
+| NIV_ETUDES | niveau d'études                  | qualitative ordinale (codes)   | 32 à 46                                           |
+| NB_PERS    | taille du foyer                  | quantitative discrète          | 1 à 13, médiane 3                                 |
+| NB_ENF     | enfants du foyer                 | quantitative discrète          | 0 à 6, médiane 0                                  |
+| REV_FOYER  | classe de revenu annuel du foyer | qualitative ordinale (classes) | 1 à 16                                            |
 
 Remarque sur le codage : la région est **NW** dans le fichier, alors que le sujet écrit MW. Se fier au fichier.
 

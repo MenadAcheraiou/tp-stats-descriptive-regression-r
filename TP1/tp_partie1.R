@@ -1,4 +1,4 @@
-# TP statistique descriptive — Partie 1 : Recensement (CPS, juillet 2012)
+# TP statistique descriptive - Partie 1 : Recensement (CPS, juillet 2012)
 # Exécution : Rscript tp_partie1.R  (depuis le dossier contenant Recensement.txt)
 
 # ---- 1.1 Importation et qualité des données ----
@@ -8,6 +8,7 @@ d <- read.table("Recensement.txt", header = TRUE, sep = "\t",
                 stringsAsFactors = FALSE)
 dim(d)        # observations x variables ; unité statistique = un individu
 head(d, 5)    # aucune variable identifiante (nom, adresse) : affichage possible
+
 
 # Q2-Q3. Types R, modalités présentes, valeurs manquantes, doublons
 str(d)
@@ -82,7 +83,7 @@ dev.off()
 table(d$NIV_ETUDES)
 d$ETUDES <- cut(d$NIV_ETUDES, breaks = c(31, 39, 42, 43, 44, 45, 46),
                 labels = c("<=Secondaire", "Postsecondaire sans bachelor",
-                           "Bachelor", "Master", "École spécifique", "Doctorat"))
+                           "Bachelor", "Master", "école spécifique", "Doctorat"))
 freq(d$ETUDES)
 
 # Q9. Catégories 1, 2, 5 : pourcentages conditionnels
@@ -161,7 +162,7 @@ dev.off()
 aggregate(SAL_HOR ~ SEXE, d, function(x) round(c(n = length(x), moy = mean(x), med = median(x)), 2))
 aggregate(SAL_HOR ~ CATEGORIE + SEXE, d3, function(x) round(c(n = length(x), moy = mean(x), med = median(x)), 2))
 
-# Q20. Études et salaire (association descriptive, pas de causalité)
+# Q20. études et salaire (association descriptive, pas de causalité)
 aggregate(SAL_HOR ~ ETUDES, d, function(x) round(c(n = length(x), moy = mean(x), med = median(x)), 2))
 png("figures/fig_sal_etudes.png", width = 900, height = 500)
 par(mar = c(13, 4, 3, 1))

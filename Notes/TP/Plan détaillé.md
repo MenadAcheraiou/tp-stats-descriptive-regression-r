@@ -17,39 +17,39 @@ Convention : `S<phase>.<n°>` · (Qn) = numéro de question du sujet · `→` = 
 
 ## Phase 1 — Partie 1 : Recensement
 ### 1.1 Importation et qualité
-- [ ] **S1.01** (Q1) Import, nombre d'observations/variables, unité statistique, 5 premières lignes. → extrait de sortie · ✔ n = 599 × 11 confirmé sur `Recensement.txt`
-- [ ] **S1.02** (Q2) Type statistique de chaque variable, avec justification pour NIV_ETUDES, CATEGORIE, REV_FOYER. → tableau variable/type · ✔ cas discutables argumentés
-- [ ] **S1.03** (Q3) Tableau de contrôle : types R, modalités présentes, NA, doublons. → tableau synthétique · ✔ modalité « NW » vs « MW » de l'énoncé signalée
-- [ ] **S1.04** (Q4) Règles de contrôle documentées (âge, salaire, enfants, taille du foyer), sans suppression. → règles + effectifs signalés · ✔ aucune ligne supprimée
-- [ ] **S1.05** (Q5) Population utilisée pour SAL_HOR (NA, zéros) et impact possible. → phrase + effectif · ✔ dénominateur indiqué
+- [x] **S1.01** (Q1) Import, nombre d'observations/variables, unité statistique, 5 premières lignes. → extrait de sortie · ✔ n = 599 × 11 confirmé sur `Recensement.txt`
+- [x] **S1.02** (Q2) Type statistique de chaque variable, avec justification pour NIV_ETUDES, CATEGORIE, REV_FOYER. → tableau variable/type · ✔ cas discutables argumentés
+- [x] **S1.03** (Q3) Tableau de contrôle : types R, modalités présentes, NA, doublons. → tableau synthétique · ✔ modalité « NW » vs « MW » de l'énoncé signalée
+- [x] **S1.04** (Q4) Règles de contrôle documentées (âge, salaire, enfants, taille du foyer), sans suppression. → règles + effectifs signalés · ✔ aucune ligne supprimée
+- [x] **S1.05** (Q5) Population utilisée pour SAL_HOR (NA, zéros) et impact possible. → phrase + effectif · ✔ dénominateur indiqué
 
 ### 1.2 Décrire la population
-- [ ] **S1.06** (Q6) Tableaux effectifs/fréquences : SEXE, REGION, STAT_MARI, SYNDICAT, CATEGORIE. → 5 tableaux · ✔ dénominateurs donnés, somme = 100 %
-- [ ] **S1.07** (Q7) Deux graphiques adaptés + justification du choix. → 2 figures numérotées, avec unités · ✔ reproduites par le script
-- [ ] **S1.08** (Q8) Niveaux d'études : codes bruts puis regroupement justifié. → tableau brut + tableau regroupé · ✔ codes 32–46 couverts, regroupement conforme au sujet
-- [ ] **S1.09** (Q9) Structure des catégories 1, 2, 5 selon sexe et études, en pourcentages conditionnels. → tableaux `prop.table(..., margin=)` · ✔ marge utilisée explicitée
-- [ ] **S1.10** (Q10) Deux différences marquantes + pourquoi les effectifs bruts trompent. → paragraphe · ✔ effectifs bruts et pourcentages cités ensemble
+- [x] **S1.06** (Q6) Tableaux effectifs/fréquences : SEXE, REGION, STAT_MARI, SYNDICAT, CATEGORIE. → 5 tableaux · ✔ dénominateurs donnés, somme = 100 %
+- [x] **S1.07** (Q7) Deux graphiques adaptés + justification du choix. → 2 figures numérotées, avec unités · ✔ reproduites par le script
+- [x] **S1.08** (Q8) Niveaux d'études : codes bruts puis regroupement justifié. → tableau brut + tableau regroupé · ✔ codes 32–46 couverts, regroupement conforme au sujet
+- [x] **S1.09** (Q9) Structure des catégories 1, 2, 5 selon sexe et études, en pourcentages conditionnels. → tableaux `prop.table(..., margin=)` · ✔ marge utilisée explicitée
+- [x] **S1.10** (Q10) Deux différences marquantes + pourquoi les effectifs bruts trompent. → paragraphe · ✔ effectifs bruts et pourcentages cités ensemble
 
 ### 1.3 Distributions et indicateurs
-- [ ] **S1.11** (Q11) Indicateurs AGE, SAL_HOR, NB_PERS, NB_ENF + justification. → tableau · ✔ n valide, moyenne, médiane, sd, quartiles, min, max
-- [ ] **S1.12** (Q12) Forme de la distribution de SAL_HOR : histogramme + boxplot. → 1 figure + commentaire · ✔ asymétrie, dispersion, atypiques commentées
-- [ ] **S1.13** (Q13) Deux histogrammes de SAL_HOR avec classes différentes. → 1 figure double · ✔ effet du découpage expliqué
-- [ ] **S1.14** (Q14) Moyenne vs médiane du salaire, sans refaire le tableau de Q11. → paragraphe · ✔ renvoi au tableau Q11
-- [ ] **S1.15** (Q15) IQR, règle 1,5 × IQR, observations atypiques (pas forcément erronées). → chiffres + commentaire · ✔ bornes et nombre de valeurs atypiques recalculés
-- [ ] **S1.16** (Q16) Fonction de répartition empirique (`ecdf`) + lecture d'une proportion ou d'un quantile. → figure + valeur lue · ✔ valeur recoupée par un calcul direct
-- [ ] **S1.17** (Q17) Variance en n vs n−1, et `var()` de R. → mini-calcul + explication · ✔ les deux valeurs retrouvées à la main
+- [x] **S1.11** (Q11) Indicateurs AGE, SAL_HOR, NB_PERS, NB_ENF + justification. → tableau · ✔ n valide, moyenne, médiane, sd, quartiles, min, max
+- [x] **S1.12** (Q12) Forme de la distribution de SAL_HOR : histogramme + boxplot. → 1 figure + commentaire · ✔ asymétrie, dispersion, atypiques commentées
+- [x] **S1.13** (Q13) Deux histogrammes de SAL_HOR avec classes différentes. → 1 figure double · ✔ effet du découpage expliqué
+- [x] **S1.14** (Q14) Moyenne vs médiane du salaire, sans refaire le tableau de Q11. → paragraphe · ✔ renvoi au tableau Q11
+- [x] **S1.15** (Q15) IQR, règle 1,5 × IQR, observations atypiques (pas forcément erronées). → chiffres + commentaire · ✔ bornes et nombre de valeurs atypiques recalculés
+- [x] **S1.16** (Q16) Fonction de répartition empirique (`ecdf`) + lecture d'une proportion ou d'un quantile. → figure + valeur lue · ✔ valeur recoupée par un calcul direct
+- [x] **S1.17** (Q17) Variance en n vs n−1, et `var()` de R. → mini-calcul + explication · ✔ les deux valeurs retrouvées à la main
 
 ### 1.4 Comparer et interpréter
-- [ ] **S1.18** (Q18) Salaires des catégories 1, 2, 5 : tableau commun + graphique, centre et dispersion. → tableau + figure · ✔ effectifs par groupe affichés
-- [ ] **S1.19** (Q19) Salaires selon le sexe, global puis dans les catégories 1, 2, 5. → tableau + commentaire · ✔ conclusions globales vs par catégorie comparées
-- [ ] **S1.20** (Q20) Études et salaire, sans conclure à la causalité. → tableau/figure · ✔ formulation non causale
-- [ ] **S1.21** (Q21) Âge et salaire : nuage + tendance descriptive adaptée, limites. → figure + limites · ✔ tendance justifiée
-- [ ] **S1.22** (Q22) SYNDICAT selon la catégorie, puis salaires syndiqués/non syndiqués si les effectifs le permettent. → tableaux · ✔ petits effectifs signalés
-- [ ] **S1.23** (Q23) Trois constats chiffrés et deux limites. → paragraphe · ✔ chaque constat renvoie à un résultat du rapport
+- [x] **S1.18** (Q18) Salaires des catégories 1, 2, 5 : tableau commun + graphique, centre et dispersion. → tableau + figure · ✔ effectifs par groupe affichés
+- [x] **S1.19** (Q19) Salaires selon le sexe, global puis dans les catégories 1, 2, 5. → tableau + commentaire · ✔ conclusions globales vs par catégorie comparées
+- [x] **S1.20** (Q20) Études et salaire, sans conclure à la causalité. → tableau/figure · ✔ formulation non causale
+- [x] **S1.21** (Q21) Âge et salaire : nuage + tendance descriptive adaptée, limites. → figure + limites · ✔ tendance justifiée
+- [x] **S1.22** (Q22) SYNDICAT selon la catégorie, puis salaires syndiqués/non syndiqués si les effectifs le permettent. → tableaux · ✔ petits effectifs signalés
+- [x] **S1.23** (Q23) Trois constats chiffrés et deux limites. → paragraphe · ✔ chaque constat renvoie à un résultat du rapport
 
 ### 1.5 Recul critique
-- [ ] **S1.24** (Q24) Différence observée ≠ discrimination ni causalité ; deux variables de contexte. → paragraphe · ✔ aucune phrase causale
-- [ ] **S1.25** (Q25) REV_FOYER : ce que permettent les classes, ce qu'elles empêchent de calculer ; trou entre classes 5 et 6 signalé et vérifié, pas corrigé. → paragraphe · ✔ vérification faite sur les données et le dictionnaire
+- [x] **S1.24** (Q24) Différence observée ≠ discrimination ni causalité ; deux variables de contexte. → paragraphe · ✔ aucune phrase causale
+- [x] **S1.25** (Q25) REV_FOYER : ce que permettent les classes, ce qu'elles empêchent de calculer ; trou entre classes 5 et 6 signalé et vérifié, pas corrigé. → paragraphe · ✔ vérification faite sur les données et le dictionnaire
 - [ ] **S1.26** (Q26, optionnel) Comparaison avec un indicateur récent BLS/Census (définitions, champ, unité, période). → à décider ensemble · ✔ si retenu : source citée et comparabilité discutée
 
 ## Phase 2 — Partie 2 : Boston
