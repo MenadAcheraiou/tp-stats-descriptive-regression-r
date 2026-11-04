@@ -1,0 +1,224 @@
+---
+title: "Statistique descriptive et régression sous R"
+subtitle: "Partie 1 : données socio-économiques (CPS 2012) — Partie 2 : régression sur Boston (1970)"
+author: "Menad Acheraiou et Belgacem Smaali"
+date: "`r format(Sys.Date(), '%d/%m/%Y')`"
+lang: fr
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    latex_engine: pdflatex
+    fig_caption: true
+    keep_tex: false
+header-includes:
+  - \usepackage[T1]{fontenc}
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{lmodern}
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+---
+
+```{r setup, include=FALSE}
+# Squelette du rapport. Ce fichier doit rester reproductible : tout chiffre cité
+# dans le texte est calculé ici (`r ...`) ou provient des scripts tp_partie1.R / tp_partie2.R.
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                      fig.width = 6.5, fig.height = 4, fig.align = "center", dpi = 150)
+options(OutDec = ",")                      # virgule décimale dans les sorties
+d <- read.table("Recensement.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+library(MASS)
+data("Boston")
+x <- Boston$lstat; y <- Boston$medv
+d$ETUDES <- cut(d$NIV_ETUDES, breaks = c(31, 39, 42, 43, 44, 45, 46),
+                labels = c("<= Secondaire", "Postsec. sans bachelor", "Bachelor", "Master", "Ecole specifique", "Doctorat"))
+d3 <- subset(d, CATEGORIE %in% c(1, 2, 5)); d3$CATEGORIE <- factor(d3$CATEGORIE)
+tab <- function(df, cap, ...) knitr::kable(df, caption = cap, booktabs = TRUE, ...)
+```
+
+\newpage
+
+# Introduction
+
+*À rédiger (environ 0,5 page).* Présenter l'objectif du travail, les deux jeux de données
+(enquête CPS de juillet 2012 ; recensement de 1970 pour Boston), le caractère **historique** et
+**descriptif** de l'étude, et le plan du rapport.
+
+# Données et méthodes
+
+## Partie 1 : Recensement
+
+Le fichier contient `r nrow(d)` individus (une ligne par individu) et `r ncol(d)` variables.
+Importation avec `read.table()` ; qualité contrôlée par des règles documentées, sans suppression
+d'observations (voir 3.1).
+
+*À rédiger : fonctions R utilisées, type de chaque variable, regroupements retenus et leur justification.*
+
+## Partie 2 : Boston
+
+`MASS::Boston` : `r nrow(Boston)` secteurs. X = `lstat`, Y = `medv` (milliers de dollars).
+
+*À rédiger : méthodes (moindres carrés, `cor.test`, régressogramme, polynômes, AIC).*
+
+# Résultats : Partie 1 (Recensement)
+
+## Importation et qualité des données
+
+```{r controle}
+controle <- data.frame(Variable = names(d), `Type R` = sapply(d, class),
+                       NA_ = colSums(is.na(d)), Modalités = sapply(d, function(v) length(unique(v))),
+                       check.names = FALSE, row.names = NULL)
+names(controle)[3] <- "Manquants"
+tab(controle, paste0("Contrôle des variables du fichier Recensement.txt (n = ", nrow(d), ")"))
+```
+
+*À rédiger : types statistiques (cas discutables NIV_ETUDES, CATEGORIE, REV_FOYER), règles de contrôle
+(âge, salaire, enfants, taille du foyer), population analysée pour SAL_HOR, modalité NW du fichier
+(l'énoncé annonce MW), impact possible des choix.*
+
+## Décrire la population
+
+```{r freq-sexe}
+f <- function(v) { t <- table(v); data.frame(Modalité = names(t), Effectif = as.vector(t),
+                   `Fréquence (%)` = round(100 * as.vector(prop.table(t)), 1), check.names = FALSE) }
+tab(f(d$SEXE), paste0("Répartition par sexe (n = ", nrow(d), ")"))
+```
+
+```{r fig-categories, fig.cap="Effectifs par catégorie professionnelle (individus), n = 599"}
+par(mar = c(4, 4, 1, 1))
+barplot(sort(table(d$CATEGORIE)), horiz = TRUE, las = 1, col = "steelblue",
+        xlab = "Effectif (individus)", ylab = "Catégorie professionnelle")
+```
+
+```{r fig-region, fig.cap="Répartition par région (fréquence en %), n = 599"}
+par(mar = c(4, 4, 1, 1))
+barplot(100 * prop.table(table(d$REGION)), col = "grey60", xlab = "Région", ylab = "Fréquence (%)")
+```
+
+*À rédiger : tableaux pour REGION, STAT_MARI, SYNDICAT, CATEGORIE ; deux graphiques justifiés ;
+études (codes bruts puis regroupement) ; catégories 1, 2, 5 selon sexe et études (pourcentages
+conditionnels) ; deux différences marquantes et piège des effectifs bruts.*
+
+## Distributions et indicateurs
+
+```{r hist-sal, fig.cap=paste0("Distribution du salaire horaire (en dollars par heure), n = ", sum(!is.na(d$SAL_HOR)))}
+hist(d$SAL_HOR, breaks = 20, col = "grey70", border = "white",
+     xlab = "Salaire horaire ($/h)", ylab = "Effectif", main = "")
+```
+
+```{r fig-boxplot, fig.cap="Boîte à moustaches du salaire horaire (\\$/h), n = 599", fig.height=2.5}
+par(mar = c(4, 2, 1, 1))
+boxplot(d$SAL_HOR, horizontal = TRUE, xlab = "Salaire horaire ($/h)")
+```
+
+```{r fig-classes, fig.cap="Deux découpages en classes du salaire horaire (\\$/h)", fig.height=3.5}
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+hist(d$SAL_HOR, breaks = 5, col = "grey60", xlab = "Salaire horaire ($/h)", ylab = "Effectif", main = "5 classes")
+hist(d$SAL_HOR, breaks = 40, col = "grey60", xlab = "Salaire horaire ($/h)", ylab = "Effectif", main = "40 classes")
+```
+
+```{r fig-ecdf, fig.cap="Fonction de répartition empirique du salaire horaire (\\$/h)"}
+Fn <- ecdf(d$SAL_HOR)
+par(mar = c(4, 4, 1, 1))
+plot(Fn, xlab = "Salaire horaire ($/h)", ylab = "F(x)", main = "")
+abline(v = 15, h = Fn(15), lty = 2)
+```
+
+*À rédiger : indicateurs (Q11), forme de la distribution, deux découpages, moyenne et médiane,
+IQR et valeurs atypiques, fonction de répartition empirique, variance avec $n$ et $n-1$.*
+
+## Comparer et interpréter
+
+```{r fig-cat-sal, fig.cap="Salaire horaire (\\$/h) selon la catégorie professionnelle (1, 2 et 5)"}
+par(mar = c(4, 4, 1, 1))
+boxplot(SAL_HOR ~ CATEGORIE, d3, xlab = "Catégorie professionnelle", ylab = "Salaire horaire ($/h)")
+```
+
+```{r fig-etudes-sal, fig.cap="Salaire horaire (\\$/h) selon le niveau d'études regroupé", fig.height=4.5}
+par(mar = c(9, 4, 1, 1))
+boxplot(SAL_HOR ~ ETUDES, d, las = 2, xlab = "", ylab = "Salaire horaire ($/h)")
+```
+
+```{r fig-age-sal, fig.cap="Salaire horaire (\\$/h) selon l'âge (années), avec tendance lowess"}
+par(mar = c(4, 4, 1, 1))
+plot(d$AGE, d$SAL_HOR, pch = 16, col = "#00000055", xlab = "Âge (années)", ylab = "Salaire horaire ($/h)")
+lines(lowess(d$AGE, d$SAL_HOR), col = "red", lwd = 2)
+```
+
+*À rédiger : catégories 1, 2, 5 ; sexe ; études ; âge ; syndicat ; trois constats chiffrés et deux limites.*
+
+## Recul critique
+
+*À rédiger : différence observée et absence de causalité, deux variables de contexte, classes de
+REV_FOYER (discontinuité entre les classes 5 et 6 signalée, non corrigée) ; option Q26 éventuelle.*
+
+# Résultats : Partie 2 (Boston)
+
+```{r nuage, fig.cap=paste0("Valeur médiane des logements (k\\$) selon lstat (%), n = ", nrow(Boston))}
+plot(x, y, pch = 16, col = "#00000066", xlab = "lstat (%)", ylab = "medv (k$)")
+abline(lm(medv ~ lstat, Boston), col = "red", lwd = 2)
+```
+
+```{r coef}
+m <- lm(medv ~ lstat, Boston)
+tab(data.frame(Coefficient = c("Ordonnée à l'origine", "Pente (lstat)"),
+               Estimation = round(coef(m), 3)), "Droite des moindres carrés (medv en k$, lstat en %)")
+```
+
+```{r fig-residus, fig.cap="Résidus du modèle linéaire (k\\$) : histogramme, boîte à moustaches et résidus selon lstat (lignes à $\\pm 2$ écarts-types empiriques)", fig.width=9, fig.height=3.5}
+res <- residuals(m)
+par(mfrow = c(1, 3), mar = c(4, 4, 2, 1))
+hist(res, col = "grey60", xlab = "Résidu (k$)", ylab = "Effectif", main = "Histogramme")
+boxplot(res, ylab = "Résidu (k$)", main = "Boîte à moustaches")
+plot(x, res, pch = 16, col = "#00000066", xlab = "lstat (%)", ylab = "Résidu (k$)", main = "Résidus selon lstat")
+abline(h = c(-2, 0, 2) * sd(res), lty = c(2, 1, 2), col = "red")
+```
+
+```{r regressogramme, fig.cap="Régressogramme (moyennes de medv en k\\$ par classe de lstat), courbe des moyennes et droite de régression"}
+cl <- cut(x, breaks = c(-Inf, 5, 10, 15, 20, 25, Inf))
+moy <- tapply(y, cl, mean)
+bornes <- c(min(x), 5, 10, 15, 20, 25, max(x))
+centres <- c(2.5, 7.5, 12.5, 17.5, 22.5, 30)
+par(mar = c(4, 4, 1, 1))
+plot(x, y, pch = 16, col = "#00000044", xlab = "lstat (%)", ylab = "medv (k$)")
+segments(bornes[-7], moy, bornes[-1], moy, col = "blue", lwd = 3)
+lines(centres, moy, col = "darkgreen", lwd = 2, type = "b")
+abline(m, col = "red", lwd = 2)
+```
+
+```{r fig-poly, fig.cap="Ajustements linéaire et polynomiaux (degrés 2 à 4) de medv (k\\$) sur lstat (%)"}
+mods <- list(lin = m, d2 = lm(medv ~ poly(lstat, 2, raw = TRUE), Boston),
+             d3 = lm(medv ~ poly(lstat, 3, raw = TRUE), Boston),
+             d4 = lm(medv ~ poly(lstat, 4, raw = TRUE), Boston))
+xs <- data.frame(lstat = seq(min(x), max(x), length.out = 200))
+cols <- c("red", "blue", "darkgreen", "orange")
+par(mar = c(4, 4, 1, 1))
+plot(x, y, pch = 16, col = "#00000044", xlab = "lstat (%)", ylab = "medv (k$)")
+for (i in 1:4) lines(xs$lstat, predict(mods[[i]], xs), col = cols[i], lwd = 2)
+legend("topright", c("linéaire", "degré 2", "degré 3", "degré 4"), col = cols, lwd = 2)
+tab(data.frame(Modèle = names(mods), `R²` = round(sapply(mods, function(k) summary(k)$r.squared), 3),
+               AIC = round(sapply(mods, AIC), 1), check.names = FALSE, row.names = NULL),
+    "Comparaison des modèles : R² et AIC")
+```
+
+*À rédiger : nuage, droite (formules et `lm()`), corrélation et R², test de Pearson, valeurs ajustées,
+résidus (`sd(residuals)` et `sigma`), prévision, régressogramme, polynômes de degré 2 à 4 et AIC.*
+
+# Discussion critique
+
+*À rédiger : limites (données de 2012 et de 1970, échantillon, variables omises), distinction
+association / causalité, sensibilité aux valeurs extrêmes.*
+
+# Conclusion
+
+*À rédiger.*
+
+# Bibliographie
+
+*À compléter : sujet du TP, documentation de R et de `MASS`, sources éventuelles (BLS, Census Bureau).*
+
+\newpage
+
+# Annexes {-}
+
+*Sorties complémentaires et, si utile, le script (hors des 20 pages).*
