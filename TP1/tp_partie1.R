@@ -134,6 +134,7 @@ plot(Fn, xlab = "Salaire horaire ($/h)", ylab = "F(x)", main = "Fonction de rép
 abline(v = 15, h = Fn(15), lty = 2)
 dev.off()
 Fn(15)                        # proportion gagnant au plus 15 $/h
+mean(d$SAL_HOR <= 15)       # recoupement par calcul direct (doit égaler Fn(15))
 quantile(d$SAL_HOR, 0.9)      # quantile d'ordre 0,9
 
 # Q17. Variance descriptive (n) vs corrigée (n-1) ; var() utilise n-1
