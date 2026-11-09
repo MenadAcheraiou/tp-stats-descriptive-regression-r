@@ -17,6 +17,7 @@ header-includes:
   - \usepackage[utf8]{inputenc}
   - \usepackage{lmodern}
   - \usepackage{float}
+  - \usepackage{booktabs}
   - \floatplacement{figure}{H}
   - \usepackage{etoolbox}
   - \AtBeginDocument{\renewcommand{\tablename}{Tableau}\renewcommand{\figurename}{Figure}}
@@ -32,6 +33,8 @@ d <- read.table("Recensement.txt", header = TRUE, sep = "\t", stringsAsFactors =
 library(MASS)
 data("Boston")
 x <- Boston$lstat; y <- Boston$medv
+# Palette Okabe-Ito (distincte pour les daltoniens) des figures de la Partie 2
+gris <- "#00000055"; rouge <- "#D55E00"; bleu <- "#0072B2"; vert <- "#009E73"; rose <- "#CC79A7"
 d$ETUDES <- cut(d$NIV_ETUDES, breaks = c(31, 39, 42, 43, 44, 45, 46),
                 labels = c("<= Secondaire", "Postsec. sans bachelor", "Bachelor", "Master", "Ecole specifique", "Doctorat"))
 d3 <- subset(d, CATEGORIE %in% c(1, 2, 5)); d3$CATEGORIE <- factor(d3$CATEGORIE)
@@ -42,9 +45,18 @@ tab <- function(df, cap, ...) knitr::kable(df, caption = cap, booktabs = TRUE, .
 
 # Introduction
 
-*À rédiger (environ 0,5 page).* Présenter l'objectif du travail, les deux jeux de données
-(enquête CPS de juillet 2012 ; recensement de 1970 pour Boston), le caractère **historique** et
-**descriptif** de l'étude, et le plan du rapport.
+Ce rapport présente deux analyses statistiques réalisées sous R. La première (Partie 1) explore le fichier
+`Recensement.txt`, issu de l'enquête américaine *Current Population Survey* de juillet 2012 : nous décrivons la
+population observée et nous étudions les salaires horaires selon la profession, le sexe et le niveau d'études. La
+seconde (Partie 2) étudie, sur le jeu `Boston` du package `MASS` (recensement américain de 1970), la relation entre la
+part de population de faible statut socio-économique (`lstat`) et la valeur médiane des logements (`medv`), par
+régression linéaire puis polynomiale.
+
+Les deux jeux de données sont **historiques** et les analyses **descriptives** : elles décrivent ce qui est observé dans
+ces échantillons, sans prétendre à la situation actuelle, à une relation de cause à effet ou à une preuve de
+discrimination. Le rapport suit le plan suivant : pour chaque partie, données et méthodes, résultats commentés puis
+discussion critique ; une conclusion générale et la bibliographie terminent le document. Les scripts
+`tp_partie1.R` et `tp_partie2.R` et le fichier `rapport.Rmd` reproduisent l'ensemble des tableaux et des figures.
 
 # Partie 1 : Recensement (CPS, 2012)
 
@@ -97,7 +109,7 @@ Fonctions R utilisées : `read.table()` (import), `dim()`, `head()`, `str()`, `c
 globales ou conditionnelles), `cut()` (regroupement des codes), `subset()` (catégories 1, 2 et 5),
 `mean()`, `median()`, `sd()`, `var()`, `quantile()`, `IQR()` (position et dispersion), `aggregate()`,
 `tapply()` (indicateurs par groupe), `barplot()`, `hist()`, `boxplot()`, `plot()` (graphiques), `ecdf()`
-(fonction de répartition), `cor()` et `lowess()` (corrélation et courbe de tendance).
+(fonction de répartition), `cor()` (corrélation), `segments()`, `lines()`, `legend()` (régressogramme de l'âge).
 
 ### Dictionnaire des variables
 
@@ -455,24 +467,40 @@ vaut $\eta^2$ = `r fr(e2_et, 3)` : c'est la part de la variance totale du salair
 elle ne prouve pas que le diplôme produit ces écarts : les plus diplômés peuvent aussi différer par leur métier, leur âge
 ou leur région, et rien ne permet ici de séparer ces facteurs.
 
-```{r fig-age-sal, fig.cap=paste0("Salaire horaire (\\$/h) selon l'âge (années), avec courbe de tendance lowess, n = ", n1), fig.width=5.5, fig.height=2.6}
+```{r fig-age-sal, fig.cap=paste0("Salaire horaire (\\$/h) selon l'âge (années) : régressogramme (moyenne par tranche d'âge, bleu) et courbe reliant les moyennes aux centres des tranches (vert), n = ", n1), fig.width=5.5, fig.height=3.4}
+# régressogramme comme au cours 4 : tranches de 10 ans, 60-80 regroupées (peu de plus de 70 ans)
+cl_age <- cut(d$AGE, breaks = c(10, 20, 30, 40, 50, 60, 80))
+stopifnot(!anyNA(cl_age))
+n_age <- table(cl_age); moy_age <- tapply(d$SAL_HOR, cl_age, mean); med_age <- tapply(d$SAL_HOR, cl_age, median)
+centres_age <- c(15, 25, 35, 45, 55, 70)
+bornes_age <- c(min(d$AGE), 20, 30, 40, 50, 60, max(d$AGE))
 par(mar = c(4, 4, 1, 1))
 plot(d$AGE, d$SAL_HOR, pch = 16, col = "#00000040", xlab = "Âge (années)",
      ylab = "Salaire horaire ($/h)", frame = FALSE)
-lw <- lowess(d$AGE, d$SAL_HOR)
-lines(lw, col = "firebrick", lwd = 2)
-ages_lus <- c(20, 45, 60)
-lw_at <- approx(lw$x, lw$y, xout = ages_lus, ties = mean)$y
+segments(bornes_age[-7], moy_age, bornes_age[-1], moy_age, col = bleu, lwd = 3)
+lines(centres_age, moy_age, col = vert, lwd = 2, lty = 2, type = "b", pch = 17)
+legend("topleft", c("Moyenne par tranche", "Courbe reliant les moyennes"), col = c(bleu, vert),
+       lwd = c(3, 2), lty = c(1, 2), pch = c(NA, 17), bty = "n", cex = 0.7)
 r_age <- cor(d$AGE, d$SAL_HOR)
 ```
 
-Le nuage (figure \ref{fig:fig-age-sal}) est très dispersé. La courbe lowess, qui suit les moyennes
-locales du nuage, monte d'environ `r fr(lw_at[1], 0)` \$/h à `r ages_lus[1]` ans à `r fr(lw_at[2], 0)` \$/h vers `r ages_lus[2]` ans,
-puis progresse peu (`r fr(lw_at[3], 0)` \$/h à `r ages_lus[3]` ans). Le coefficient de corrélation
+Le nuage (figure \ref{fig:fig-age-sal}) est très dispersé. Pour dégager une tendance, nous traçons un
+régressogramme comme au cours : `cut()` découpe l'âge en tranches de 10 ans et `tapply()` calcule le salaire
+moyen de chaque tranche. Les âges vont de `r min(d$AGE)` à `r max(d$AGE)` ans : la première tranche, ]10 ; 20], ne
+contient donc que des `r min(d$AGE)`-20 ans (`r n_age[1]` personnes), et nous regroupons 60 à 80 ans en une seule
+tranche (`r n_age[6]` personnes), car il n'y a que `r sum(d$AGE > 70)` personnes de plus de 70 ans. Les autres
+tranches comptent de `r min(n_age[2:5])` à `r max(n_age[2:5])` personnes. Les moyennes sont placées aux centres des
+tranches (`r centres_age[1]`, `r centres_age[2]`, ..., `r centres_age[6]` ans) ; pour les tranches extrêmes, nous gardons
+les milieux de ]10 ; 20] et ]60 ; 80], bien que les âges observés y soient `r min(d$AGE)`-20 et
+`r min(d$AGE[d$AGE > 60])`-`r max(d$AGE)` ans. Le salaire moyen monte vite, de
+`r fr(moy_age[1], 1)` \$/h chez les `r min(d$AGE)`-20 ans à `r fr(moy_age[3], 1)` \$/h entre 30 et 40 ans, puis plus
+lentement, de `r fr(min(diff(moy_age)[3:5]), 1)` à `r fr(max(diff(moy_age)[3:5]), 1)` \$/h par tranche : `r fr(moy_age[4], 1)`, `r fr(moy_age[5], 1)` et `r fr(moy_age[6], 1)` \$/h dans les tranches suivantes. Le coefficient de corrélation
 linéaire est faible, r = `r fr(r_age, 3)`, en partie parce que la relation n'est pas une droite.
 Les données sont de plus transversales : elles comparent des personnes de générations
-différentes en 2012, pas l'évolution du salaire d'une même personne. La courbe repose enfin sur peu
-d'observations aux âges extrêmes.
+différentes en 2012, pas l'évolution du salaire d'une même personne. La première tranche ne repose que sur
+`r n_age[1]` personnes, la dernière regroupe vingt ans d'âge, et une moyenne reste sensible aux salaires très élevés :
+dans la tranche 60-80 ans, la médiane (`r fr(med_age[6], 2)` \$/h) est même un peu plus basse que celle des 50-60 ans
+(`r fr(med_age[5], 0)` \$/h).
 
 ```{r synd}
 p_sy <- prop.table(table(d$CATEGORIE, d$SYNDICAT), margin = 1)
@@ -557,76 +585,289 @@ préféré consacrer la place à l'analyse des données de 2012.
 
 ## Données et méthodes
 
-`MASS::Boston` : `r nrow(Boston)` secteurs. X = `lstat`, Y = `medv` (milliers de dollars).
+Le jeu `Boston` du package `MASS` (`library(MASS)` puis `data("Boston")`) décrit `r nrow(Boston)` secteurs
+de la région de Boston d'après le recensement américain de 1970 : ce sont des données historiques, qui ne
+décrivent pas la situation actuelle. Nous étudions X = `lstat` (pourcentage de la population de statut
+socio-économique faible, en %) et Y = `medv` (valeur médiane des logements, en milliers de dollars de 1970, notés k\$, non actualisés).
+Les analyses sont descriptives et ne permettent aucune conclusion causale.
 
-*À rédiger : méthodes (moindres carrés, `cor.test`, régressogramme, polynômes, AIC).*
+Fonctions R utilisées : `plot()`, `abline()` (nuage et droite), `lm()`, `summary()`, `coef()` (moindres
+carrés), `cor()` et `cor.test()` (corrélation), `fitted()`, `residuals()`, `sd()`, `sigma()`, `hist()`, `boxplot()`
+(ajustement et résidus), `predict()` (prévision), `cut()`, `tapply()`, `segments()`, `lines()`, `legend()` (régressogramme), `poly()`
+(polynômes de degré 2 à 4), `AIC()` (comparaison de modèles). Tous les chiffres de cette partie sont
+calculés dans ce document ; le script `tp_partie2.R` refait les mêmes calculs, tableaux et figures.
 
 ## Résultats
 
-```{r nuage, fig.cap=paste0("Valeur médiane des logements (k\\$) selon lstat (%), n = ", nrow(Boston))}
-plot(x, y, pch = 16, col = "#00000066", xlab = "lstat (%)", ylab = "medv (k$)")
-abline(lm(medv ~ lstat, Boston), col = "red", lwd = 2)
+### Forme de la relation et droite de régression
+
+```{r nuage, fig.cap=paste0("Valeur médiane des logements medv (k\\$) selon lstat (%), n = ", nrow(Boston), " secteurs")}
+par(mar = c(4, 4, 2, 1))
+plot(x, y, pch = 16, col = gris, xlab = "lstat (%)", ylab = "medv (k$)",
+     main = "Valeur médiane des logements selon lstat (n = 506)")
 ```
 
+Le nuage (figure \ref{fig:nuage}) décrit `r nrow(Boston)` secteurs de Boston, avec lstat de
+`r fr(min(x), 2)` à `r fr(max(x), 2)` % et medv de `r fr(min(y), 0)` à `r fr(max(y), 0)` k\$. La relation est
+décroissante : plus la part de lstat est élevée, plus la valeur médiane des logements est basse. Elle est
+intense (corrélation linéaire r = `r fr(cor(x, y), 3)`) mais pas parfaitement linéaire : le nuage est
+convexe, medv chute vite quand lstat passe de quelques % à 10 %, puis
+décroît plus lentement. La dispersion verticale est aussi plus grande pour les faibles valeurs de lstat.
+Enfin, `r sum(y == 50)` secteurs ont medv = 50 k\$ exactement : la variable semble plafonnée à cette valeur,
+ce qui limite l'interprétation en haut du nuage.
+
 ```{r coef}
+frp <- function(x, k = 1) gsub(" ", " ", fr(x, k), fixed = TRUE)   # milliers séparés par une espace insécable
+# (a) formules du cours : b1 = Cov(x, y) / Var(x), b0 = moyenne(y) - b1 * moyenne(x)
+# (rapport identique avec le dénominateur n du cours ou n - 1 de cov() et var())
+b1 <- cov(x, y) / var(x)
+b0 <- mean(y) - b1 * mean(x)
+# (b) lm() puis summary()
 m <- lm(medv ~ lstat, Boston)
-tab(data.frame(Coefficient = c("Ordonnée à l'origine", "Pente (lstat)"),
-               Estimation = round(coef(m), 3)), "Droite des moindres carrés (medv en k$, lstat en %)")
+stopifnot(isTRUE(all.equal(unname(coef(m)), c(b0, b1))))
+kab(data.frame(Coefficient = c("Ordonnée à l'origine b0 (k\\$)", "Pente b1 (k\\$ par point de lstat)"),
+               Formules = fr(c(b0, b1), 4), `lm()` = fr(coef(m), 4),
+               `Erreur-type` = fr(summary(m)$coefficients[, 2], 4), check.names = FALSE, row.names = NULL),
+    paste0("Droite des moindres carrés de medv sur lstat : formules du cours et lm() (n = ", nrow(Boston), ")"),
+    escape = FALSE)
 ```
+
+```{r fig-droite, fig.cap=paste0("Nuage de medv (k\\$) selon lstat (\\%) et droite des moindres carrés, n = ", nrow(Boston))}
+par(mar = c(4, 4, 2, 1))
+plot(x, y, pch = 16, col = gris, xlab = "lstat (%)", ylab = "medv (k$)",
+     main = "Droite des moindres carrés (n = 506)")
+abline(m, col = rouge, lwd = 2)
+```
+
+Les deux calculs donnent la même droite (tableau \ref{tab:coef}) : $\hat{y} =$ `r fr(b0, 2)` $-$ `r fr(-b1, 3)` $x$, avec $x$ = lstat (%) et $\hat{y}$ en k\$.
+Les formules du cours, $b_1 = \mathrm{Cov}(x, y) / \mathrm{Var}(x)$ et
+$b_0 = \bar y - b_1 \bar x$, coïncident avec `lm()` à la précision de la machine (`all.equal()`) ; le
+rapport Cov/Var est le même que l'on divise par $n$ (cours) ou par $n-1$ (`cov()`, `var()`). La pente
+vaut `r fr(b1, 3)` : entre deux secteurs dont lstat diffère d'un point, la droite associe une valeur
+médiane des logements plus basse d'environ `r fr(-1000 * b1, 0)` \$ de 1970 (`r fr(-b1, 2)` k\$). C'est une
+différence moyenne entre secteurs, pas l'effet d'une hausse de lstat dans un même secteur. L'ordonnée
+à l'origine, `r fr(b0, 2)` k\$, est la valeur prédite pour lstat = 0 ; aucun secteur n'a cette valeur
+(minimum `r fr(min(x), 2)` %), c'est donc une extrapolation légère qui sert surtout à placer la droite.
+La figure \ref{fig:fig-droite} montre que la droite passe au-dessus des points pour les lstat moyens
+et en dessous aux deux extrémités : elle ne suit pas la courbure vue sur le nuage.
+
+### Corrélation, test et valeurs ajustées
+
+```{r cor}
+r <- cor(x, y); r2 <- summary(m)$r.squared
+r2_var <- var(fitted(m)) / var(y)   # formule du cours : R² = Var(y ajusté) / Var(y)
+ct <- cor.test(x, y)
+```
+
+Le coefficient de corrélation linéaire vaut r = `r fr(r, 3)`. Il mesure le sens et l'intensité de la
+liaison *linéaire* entre lstat et medv : il est compris entre $-1$ et $1$, et son signe négatif confirme
+le sens décroissant. Le coefficient de détermination du modèle linéaire vaut R² = `r fr(r2, 3)`, soit
+exactement $r^2$ (`r fr(r^2, 3)`) pour une régression simple, et aussi le rapport
+$\mathrm{Var}(\hat y) / \mathrm{Var}(y)$ du cours (`r fr(r2_var, 3)`). Il mesure la part de la variance de medv
+reproduite par la droite : ici `r fr(100 * r2, 1)` %, les `r fr(100 * (1 - r2), 1)` % restants n'étant pas
+expliqués par un modèle linéaire en lstat.
+
+Le test de corrélation de Pearson (`cor.test()`) porte sur $H_0 : \rho = 0$ (pas de liaison linéaire dans la
+population dont les secteurs seraient tirés) contre $H_1 : \rho \neq 0$, au seuil de 5 %. La statistique vaut
+t = `r fr(ct$statistic, 2)` pour `r ct$parameter` degrés de liberté, et la p-valeur est inférieure à
+$2{,}2 \times 10^{-16}$ ; l'intervalle de confiance à 95 % de $\rho$ est
+[`r fr(ct$conf.int[1], 3)` ; `r fr(ct$conf.int[2], 3)`]. La p-valeur est très inférieure à 5 % : nous rejetons $H_0$ et
+concluons à une corrélation linéaire négative significative entre lstat et medv. Ce test suppose
+des couples indépendants et, pour sa forme exacte, une loi approximativement normale ; or des secteurs
+voisins se ressemblent, ce qui affaiblit ces hypothèses. Surtout, une corrélation, même significative, ne dit
+pas que lstat fait baisser medv : elle décrit seulement une association.
+
+```{r fitted}
+kab(data.frame(Secteur = 1:6, `lstat (\\%)` = x[1:6], `medv observé (k\\$)` = fr(y[1:6], 1),
+               `medv ajusté (k\\$)` = fr(fitted(m)[1:6], 2),
+               `Résidu (k\\$)` = fr(residuals(m)[1:6], 2), check.names = FALSE),
+    paste0("Six premiers secteurs : valeurs observées, valeurs ajustées et résidus (n = ", nrow(Boston), ")"),
+    escape = FALSE)
+```
+
+Les valeurs ajustées `fitted(m)` sont les ordonnées de la droite aux lstat observés,
+$\hat y_i = b_0 + b_1 x_i$ : ce que le modèle prévoit pour chaque secteur (tableau \ref{tab:fitted}). Elles
+tiennent sur la droite, donc varient beaucoup moins que les valeurs observées : leur moyenne est celle de medv
+(`r fr(mean(fitted(m)), 2)` k\$) mais leur écart-type n'est que `r fr(sd(fitted(m)), 2)` k\$, contre
+`r fr(sd(y), 2)` k\$ pour medv. La différence entre valeur observée et valeur ajustée est le résidu.
+
+### Résidus
 
 ```{r fig-residus, fig.cap="Résidus du modèle linéaire (k\\$) : histogramme, boîte à moustaches et résidus selon lstat (lignes à $\\pm 2$ écarts-types empiriques)", fig.width=9, fig.height=3.5}
 res <- residuals(m)
-par(mfrow = c(1, 3), mar = c(4, 4, 2, 1))
+par(mfrow = c(1, 3), mar = c(4, 4, 3, 1), cex.lab = 1.2, cex.axis = 1.1)
 hist(res, col = "grey60", xlab = "Résidu (k$)", ylab = "Effectif", main = "Histogramme")
 boxplot(res, ylab = "Résidu (k$)", main = "Boîte à moustaches")
-plot(x, res, pch = 16, col = "#00000066", xlab = "lstat (%)", ylab = "Résidu (k$)", main = "Résidus selon lstat")
-abline(h = c(-2, 0, 2) * sd(res), lty = c(2, 1, 2), col = "red")
+plot(x, res, pch = 16, col = gris, xlab = "lstat (%)", ylab = "Résidu (k$)",
+     main = "Résidus selon lstat\n(lignes : 0 et ± 2 écarts-types)")
+abline(h = c(-2, 0, 2) * sd(res), lty = c(2, 1, 2), col = rouge, lwd = 2)
 ```
 
-```{r regressogramme, fig.cap="Régressogramme (moyennes de medv en k\\$ par classe de lstat), courbe des moyennes et droite de régression"}
-cl <- cut(x, breaks = c(-Inf, 5, 10, 15, 20, 25, Inf))
+```{r res-stats}
+res <- residuals(m)
+sd_res <- sd(res); sg <- sigma(m)
+n_sup <- sum(res > 2 * sd_res); n_inf <- sum(res < -2 * sd_res)
+```
+
+L'écart-type empirique des résidus, `sd(residuals(m))`, vaut `r fr(sd_res, 3)` k\$ ; `sigma(m)` vaut
+`r fr(sg, 3)` k\$. Les résidus ayant une moyenne nulle, `sd()` divise la somme des carrés des résidus par
+$n-1$, alors que `sigma()` la divise par $n-2$, soit $\sqrt{\sum e_i^2 / (n-2)}$ avec $n-2 =$ `r nrow(Boston) - 2` : deux paramètres ($b_0$ et $b_1$) ont été estimés. C'est
+`sigma(m)` qui estime l'écart-type des erreurs du modèle ; les deux valeurs diffèrent peu ici, car $n$ est grand.
+La figure \ref{fig:fig-residus} montre trois défauts de l'ajustement linéaire. Les résidus sont asymétriques : ils
+vont de `r fr(min(res), 1)` à `r fr(max(res), 1)` k\$, avec une queue à droite. Le nuage des résidus selon lstat
+n'est pas aplati autour de 0 : il dessine une courbe en U, avec des résidus plutôt positifs pour les faibles lstat
+et pour lstat > 25, négatifs au milieu, ce qui traduit la non-linéarité déjà vue. Enfin `r n_sup + n_inf` secteurs
+(`r fr(100 * (n_sup + n_inf) / nrow(Boston), 1)` %) sortent de la bande $\pm 2$ écarts-types, presque tous
+par le haut (`r n_sup`), alors qu'on en attendrait environ 5 %, répartis des deux côtés, si les erreurs suivaient une loi normale.
+
+### Prévision
+
+```{r predict}
+x0 <- 12
+p0 <- predict(m, data.frame(lstat = x0))
+```
+
+Nous choisissons lstat = `r x0` %, valeur située au cœur des observations (`r fr(min(x), 2)` à `r fr(max(x), 2)` %).
+`predict()` donne medv prévu = `r fr(p0, 2)` k\$, soit `r frp(1000 * p0, 0)` \$ de 1970 : c'est la valeur médiane des
+logements attendue, en moyenne, pour un secteur dont lstat vaut `r x0` %. Cette prévision est très incertaine :
+les résidus ont un écart-type d'environ `r fr(sg, 1)` k\$, et la plupart des secteurs observés restent à moins de
+2 `sigma(m)` de la droite, soit $\pm$ `r fr(2 * sg, 1)` k\$. Un secteur réel de lstat = `r x0` % peut donc s'écarter
+nettement de la prévision, plutôt vers le haut vu l'asymétrie des résidus. La prévision n'est pertinente que dans le domaine observé de lstat.
+
+### Régressogramme
+
+```{r regressogramme, fig.cap="Régressogramme de medv (k\\$) selon lstat (\\%) : moyennes par classe (fonction constante par morceaux, bleu), courbe reliant les moyennes (vert) et droite de régression (rouge)"}
+# bornes 0 (pourcentage >= 0) et 40 (> max observé) : mêmes six classes que le sujet
+cl <- cut(x, breaks = c(0, 5, 10, 15, 20, 25, 40))
+stopifnot(!anyNA(cl))   # tous les lstat sont dans ]0 ; 40] : mêmes classes que le sujet
 moy <- tapply(y, cl, mean)
 bornes <- c(min(x), 5, 10, 15, 20, 25, max(x))
-centres <- c(2.5, 7.5, 12.5, 17.5, 22.5, 30)
-par(mar = c(4, 4, 1, 1))
-plot(x, y, pch = 16, col = "#00000044", xlab = "lstat (%)", ylab = "medv (k$)")
-segments(bornes[-7], moy, bornes[-1], moy, col = "blue", lwd = 3)
-lines(centres, moy, col = "darkgreen", lwd = 2, type = "b")
-abline(m, col = "red", lwd = 2)
+centres <- c(2.5, 7.5, 12.5, 17.5, 22.5, 32.5)   # milieux des classes [0 ; 5], ..., [25 ; 40]
+par(mar = c(4, 4, 2, 1))
+plot(x, y, pch = 16, col = gris, xlab = "lstat (%)", ylab = "medv (k$)",
+     main = "Régressogramme de medv selon lstat (n = 506)")
+segments(bornes[-7], moy, bornes[-1], moy, col = bleu, lwd = 3)
+lines(centres, moy, col = vert, lwd = 2, lty = 2, type = "b", pch = 17)
+abline(m, col = rouge, lwd = 2)
+legend("topright", c("Moyennes par classe (constante par morceaux)", "Courbe reliant les moyennes", "Droite de régression"),
+       col = c(bleu, vert, rouge), lwd = c(3, 2, 2), lty = c(1, 2, 1), pch = c(NA, 17, NA), bty = "n")
 ```
 
-```{r fig-poly, fig.cap="Ajustements linéaire et polynomiaux (degrés 2 à 4) de medv (k\\$) sur lstat (%)"}
+```{r tab-regr}
+mres <- tapply(res, cl, mean)
+kab(data.frame(Classe = c("lstat $\\leq$ 5", "5 < lstat $\\leq$ 10", "10 < lstat $\\leq$ 15", "15 < lstat $\\leq$ 20",
+                          "20 < lstat $\\leq$ 25", "lstat > 25"),
+               n = as.vector(table(cl)), `Abscisse retenue` = fr(centres, 2), `Moyenne de medv (k\\$)` = fr(moy, 2),
+               `Résidu moyen de la droite (k\\$)` = fr(mres, 2), check.names = FALSE, row.names = NULL),
+    paste0("Régressogramme : effectifs et moyennes de medv par classe de lstat (n = ", nrow(Boston), ")"), escape = FALSE)
+```
+
+Le découpage `cut(x, breaks = c(0, 5, 10, 15, 20, 25, 40))` donne exactement les six classes du sujet, puisque
+lstat va de `r fr(min(x), 2)` à `r fr(max(x), 2)` % (tableau \ref{tab:tab-regr}), avec des effectifs très
+inégaux : de `r min(table(cl))` à `r max(table(cl))` secteurs. Pour la courbe reliant les moyennes, les abscisses
+sont les milieux des classes : `r fr(centres[2], 1)`, `r fr(centres[3], 1)`, `r fr(centres[4], 1)` et `r fr(centres[5], 1)` pour les classes bornées. Les deux
+classes extrêmes ne sont pas bornées dans le sujet. Pour la première, lstat est un pourcentage, donc jamais
+négatif : 0 est sa borne naturelle et nous prenons `r fr(centres[1], 1)`, milieu de [0 ; 5]. Pour la dernière, il n'y a
+pas de borne naturelle ; nous prenons 40, valeur ronde qui couvre le maximum observé (`r fr(max(x), 2)` %), et donc
+`r fr(centres[6], 1)`, milieu de [25 ; 40]. La moyenne de medv descend de
+`r fr(moy[1], 1)` k\$ dans la première classe à `r fr(moy[6], 1)` k\$ dans la dernière : la baisse est
+rapide au début puis ralentit. Par rapport à la droite (figure \ref{fig:regressogramme}), la fonction constante par
+morceaux est au-dessus pour la première et la dernière classe (résidus moyens de `r fr(mres[1], 1)` et
+`r fr(mres[6], 1)` k\$) et au-dessous aux classes intermédiaires (jusqu'à `r fr(min(mres), 1)` k\$). Elle suit mieux
+la courbure, mais ses marches dépendent du découpage choisi et chaque palier ne repose que sur les données de sa classe.
+
+### Polynômes et AIC
+
+```{r fig-poly, fig.cap="Ajustements linéaire et polynomiaux (degrés 2 à 4) de medv (k\\$) sur lstat (\\%)"}
 mods <- list(lin = m, d2 = lm(medv ~ poly(lstat, 2, raw = TRUE), Boston),
              d3 = lm(medv ~ poly(lstat, 3, raw = TRUE), Boston),
              d4 = lm(medv ~ poly(lstat, 4, raw = TRUE), Boston))
 xs <- data.frame(lstat = seq(min(x), max(x), length.out = 200))
-cols <- c("red", "blue", "darkgreen", "orange")
-par(mar = c(4, 4, 1, 1))
-plot(x, y, pch = 16, col = "#00000044", xlab = "lstat (%)", ylab = "medv (k$)")
-for (i in 1:4) lines(xs$lstat, predict(mods[[i]], xs), col = cols[i], lwd = 2)
-legend("topright", c("linéaire", "degré 2", "degré 3", "degré 4"), col = cols, lwd = 2)
-tab(data.frame(Modèle = names(mods), `R²` = round(sapply(mods, function(k) summary(k)$r.squared), 3),
-               AIC = round(sapply(mods, AIC), 1), check.names = FALSE, row.names = NULL),
-    "Comparaison des modèles : R² et AIC")
+cols <- c(rouge, bleu, vert, rose)
+par(mar = c(4, 4, 2, 1))
+plot(x, y, pch = 16, col = gris, xlab = "lstat (%)", ylab = "medv (k$)",
+     main = "Ajustements linéaire et polynomiaux (n = 506)")
+lw <- c(2, 2, 3, 2)   # degré 3 (retenu) plus épais
+for (i in 1:4) lines(xs$lstat, predict(mods[[i]], xs), col = cols[i], lwd = lw[i], lty = i)
+legend("topright", c("linéaire", "degré 2", "degré 3 (retenu)", "degré 4"), col = cols, lwd = lw, lty = 1:4, bty = "n")
 ```
 
-*À rédiger : nuage, droite (formules et `lm()`), corrélation et R², test de Pearson, valeurs ajustées,
-résidus (`sd(residuals)` et `sigma`), prévision, régressogramme, polynômes de degré 2 à 4 et AIC.*
+```{r tab-poly}
+aics <- sapply(mods, AIC); r2s <- sapply(mods, function(k) summary(k)$r.squared)
+kab(data.frame(Modèle = c("Linéaire", "Degré 2", "Degré 3", "Degré 4"), `Paramètres` = 2:5,
+               `R²` = fr(r2s, 3), AIC = fr(aics, 1), check.names = FALSE, row.names = NULL),
+    paste0("Modèles linéaire et polynomiaux : R² et AIC (n = ", nrow(Boston), ")"))
+# lstat où la courbe ajustée se met à remonter : grille de pas 0,01 (comme le code du prof),
+# premier point où la courbe augmente ; NA si elle reste décroissante sur la plage observée
+xg <- data.frame(lstat = seq(min(x), max(x), by = 0.01))
+remontee <- function(k) { f <- predict(k, xg); i <- which(diff(f) > 0); if (length(i)) xg$lstat[i[1]] else NA }
+hausse <- sapply(mods[2:4], remontee)
+stopifnot(is.na(hausse["d3"]))   # le texte affirme que seul le degré 3 reste décroissant
+```
+
+Le R² augmente à chaque degré : `r fr(r2s[1], 3)`, `r fr(r2s[2], 3)`, `r fr(r2s[3], 3)` puis
+`r fr(r2s[4], 3)` (tableau \ref{tab:tab-poly}). Le gain est très net du linéaire au degré 2
+(+`r fr(r2s[2] - r2s[1], 3)`) puis modeste (+`r fr(r2s[3] - r2s[2], 3)` et +`r fr(r2s[4] - r2s[3], 3)`). La courbe
+du degré 2 capte la convexité du nuage (figure \ref{fig:fig-poly}) ; les degrés 3 et 4 en restent très proches
+au centre du nuage et diffèrent surtout aux extrémités. Un R² plus élevé sur les données d'ajustement ne garantit pas une meilleure prévision : le R² ne peut
+qu'augmenter quand on ajoute un terme, même sans valeur explicative réelle, et un polynôme de degré élevé finit
+par épouser le bruit de l'échantillon, d'où de mauvaises prévisions sur de nouveaux secteurs (surajustement).
+Le R² ne mesure que l'ajustement aux données ayant servi à estimer le modèle.
+
+L'AIC, qui pénalise le nombre de paramètres, baisse à chaque degré : `r frp(aics[1], 1)`, `r frp(aics[2], 1)`,
+`r frp(aics[3], 1)` puis `r frp(aics[4], 1)` ; il est minimal au degré 4. Comme le demande le sujet, ce critère
+ne suffit pas à lui seul. Le gain d'AIC est énorme du linéaire au degré 2 (`r fr(aics[1] - aics[2], 0)` points), puis
+plus faible (`r fr(aics[2] - aics[3], 1)` points du degré 2 au degré 3, `r fr(aics[3] - aics[4], 1)` du degré 3 au
+degré 4) pour des courbes très proches sur la plage des données, alors que chaque degré ajoute un paramètre. Les
+graphiques comptent aussi : la courbe du degré 2 remonte à partir de lstat = `r fr(hausse[1], 1)` % et celle du
+degré 4 à partir de `r fr(hausse[3], 1)` % (`r sum(x > hausse[3])` secteurs au-delà), alors que les données ne montrent
+pas de remontée de medv pour les lstat élevés ; seul le degré 3 reste décroissant sur toute la plage observée. Nous
+retenons donc le **degré 3** : son R² est proche de celui du degré 4 (`r fr(r2s[3], 3)` contre `r fr(r2s[4], 3)`), il a
+un paramètre de moins et il reste décroissant, ce qui correspond à ce que montre le nuage. Ce choix reste discutable :
+l'AIC est plus bas de `r fr(aics[3] - aics[4], 1)` points au degré 4, un écart du même ordre que celui du degré 2 au
+degré 3 ; c'est l'examen des graphiques et la complexité qui nous font préférer le degré 3, comme le recommande le
+cours (choix du degré d'après le graphe, les résidus et le degré le plus faible possible).
 
 ## Discussion critique de la Partie 2
 
-*À rédiger : limites des données de 1970 (plafond de medv à 50), absence de causalité, choix du modèle (AIC et complexité).*
+Les données datent de 1970 et portent sur des secteurs, non sur des individus : une corrélation entre secteurs
+ne se transpose pas à un secteur donné ni aux personnes qui y vivent (biais écologique). Le plafond de medv à
+`r max(y)` k\$ (`r sum(y == max(y))` secteurs) tronque la variable en haut du nuage et contribue aux résidus
+positifs. La variable lstat, définie par le jeu de données comme un pourcentage de population de faible statut socio-économique,
+est une mesure agrégée dont la définition exacte relève du jeu de données historique. Les modèles
+ne sont comparés que sur les données ayant servi à les ajuster, et les secteurs voisins ne
+sont sans doute pas indépendants, ce qui fragilise les tests. Enfin, une association forte (R² = `r fr(r2, 2)`
+pour le modèle linéaire) n'établit pas de lien de cause à effet : d'autres caractéristiques des secteurs, absentes de
+cette étude, peuvent expliquer à la fois lstat et medv.
 
 # Conclusion
 
-*À rédiger : bilan des deux parties et limites communes (données anciennes, analyses descriptives).*
+Dans la Partie 1, le salaire horaire des `r n1` individus du fichier de 2012 est asymétrique à droite : la moyenne
+(`r fr(mean(s), 2)` \$/h) dépasse la médiane (`r fr(median(s), 0)` \$/h). Il est associé au niveau d'études, avec une
+médiane qui passe de `r fr(t_es[["Médiane"]][1], 1)` à `r fr(t_es[["Médiane"]][3], 2)` \$/h entre le secondaire et le
+bachelor. L'écart observé entre hommes et femmes sur l'ensemble ne se retrouve pas dans toutes les catégories
+professionnelles. Les données sont anciennes, l'échantillon n'est pas présenté comme représentatif et certaines
+variables importantes (temps de travail, ancienneté) manquent.
+
+Dans la Partie 2, la valeur médiane des logements est plus basse dans les secteurs où lstat est élevé : la droite des moindres carrés
+($\hat y =$ `r fr(b0, 2)` $-$ `r fr(-b1, 3)` $x$, R² = `r fr(r2, 2)`) résume la tendance, et le test de Pearson rejette
+l'absence de corrélation au seuil de 5 %. La liaison est pourtant courbée : nous retenons un polynôme de degré 3.
+L'AIC est minimal au degré 4 (`r frp(aics[4], 1)` contre `r frp(aics[3], 1)`), mais le degré 3 a un paramètre de moins
+et reste décroissant sur toute la plage observée, contrairement aux degrés 2 et 4.
+
+Dans les deux parties, les résultats décrivent des associations et non des causes ; ils portent sur des données
+historiques de 1970 et 2012 et ne se transposent pas à la situation actuelle.
 
 # Bibliographie
 
-*À compléter : sujet du TP, documentation de R et de `MASS`, sources éventuelles (BLS, Census Bureau).*
+- Université Paris Cité, *TP à rendre : statistique descriptive et régression sous R* (sujet du TP, adaptation du
+  TP de statistique descriptive sur l'enquête CPS, juillet 2012).
+- U.S. Census Bureau et Bureau of Labor Statistics, *Current Population Survey* (source de l'enquête de juillet 2012
+  dont est tiré `Recensement.txt`).
+- Harrison D. et Rubinfeld D. L. (1978), « Hedonic prices and the demand for clean air », *Journal of Environmental
+  Economics and Management*, 5, 81-102 (origine du jeu de données `Boston`).
+- Venables W. N. et Ripley B. D. (2002), *Modern Applied Statistics with S*, 4e éd., Springer (package `MASS`).
+- R Core Team, *R: A Language and Environment for Statistical Computing*, R Foundation for Statistical Computing,
+  Vienne ; documentation des fonctions `lm`, `cor.test`, `predict`, `AIC` et `hist`.
+- Supports du cours de statistique descriptive (statistique univariée, bivariée, liaison entre variables, régression).
 
-\newpage
-
-# Annexes {-}
-
-*Sorties complémentaires et, si utile, le script (hors des 20 pages).*

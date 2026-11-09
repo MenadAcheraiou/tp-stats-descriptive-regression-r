@@ -66,7 +66,7 @@ for (v in c("SEXE", "REGION", "STAT_MARI", "SYNDICAT", "CATEGORIE")) {
 
 # Q7. Deux graphiques : barres horizontales ordonnées (CATEGORIE) et barres de SEXE
 options(bitmapType = "cairo")   # accents corrects dans les PNG
-invisible(Sys.setlocale("LC_ALL", "C.UTF-8"))
+if (.Platform$OS.type != "windows") invisible(Sys.setlocale("LC_ALL", "C.UTF-8"))
 dir.create("figures", showWarnings = FALSE)
 png("figures/fig_categories.png", width = 800, height = 500)
 barplot(sort(table(d$CATEGORIE)), horiz = TRUE, las = 1, col = "steelblue",
@@ -104,17 +104,17 @@ round(t(sapply(d[c("AGE", "SAL_HOR", "NB_PERS", "NB_ENF")], resume)), 2)
 # Q12-Q13. Histogramme et boîte à moustaches ; deux découpages différents
 png("figures/fig_sal_dist.png", width = 900, height = 450)
 par(mfrow = c(1, 2))
-hist(d$SAL_HOR, breaks = 10, col = "steelblue", xlab = "Salaire horaire ($/h)",
-     ylab = "Effectif", main = "Histogramme (10 classes)")
+hist(d$SAL_HOR, breaks = seq(0, 100, 5), col = "steelblue", xlab = "Salaire horaire ($/h)",
+     ylab = "Effectif", main = "Histogramme (classes de 5 $/h)")
 boxplot(d$SAL_HOR, horizontal = TRUE, xlab = "Salaire horaire ($/h)",
         main = "Boîte à moustaches")
 dev.off()
 png("figures/fig_sal_classes.png", width = 900, height = 450)
 par(mfrow = c(1, 2))
-hist(d$SAL_HOR, breaks = 5, col = "grey60", xlab = "Salaire horaire ($/h)",
-     ylab = "Effectif", main = "5 classes")
-hist(d$SAL_HOR, breaks = 40, col = "grey60", xlab = "Salaire horaire ($/h)",
-     ylab = "Effectif", main = "40 classes")
+hist(d$SAL_HOR, breaks = seq(0, 100, 20), col = "grey60", xlab = "Salaire horaire ($/h)",
+     ylab = "Effectif", main = "Classes de 20 $/h")
+hist(d$SAL_HOR, breaks = seq(0, 100, 2), col = "grey60", xlab = "Salaire horaire ($/h)",
+     ylab = "Effectif", main = "Classes de 2 $/h")
 dev.off()
 
 # Q14-Q15. Moyenne vs médiane ; IQR et règle 1,5 x IQR
@@ -171,11 +171,22 @@ boxplot(SAL_HOR ~ ETUDES, d, las = 2, xlab = "", ylab = "Salaire horaire ($/h)",
 dev.off()
 cor(d$NIV_ETUDES, d$SAL_HOR, method = "spearman")
 
-# Q21. Âge et salaire : nuage de points + lissage lowess
+# Q21. Âge et salaire : nuage de points + régressogramme (cours 4) ; tranches de 10 ans, 60-80 regroupées (peu de > 70 ans)
 png("figures/fig_age_sal.png", width = 700, height = 450)
-plot(d$AGE, d$SAL_HOR, pch = 16, col = "#00000055", xlab = "Âge (années)",
-     ylab = "Salaire horaire ($/h)", main = "Salaire horaire selon l'âge")
-lines(lowess(d$AGE, d$SAL_HOR), col = "red", lwd = 2)
+par(mar = c(4, 4, 1, 1))
+plot(d$AGE, d$SAL_HOR, pch = 16, col = "#00000040", xlab = "Âge (années)",
+     ylab = "Salaire horaire ($/h)", frame = FALSE)
+cl_age <- cut(d$AGE, breaks = c(10, 20, 30, 40, 50, 60, 80))
+stopifnot(!anyNA(cl_age))
+table(cl_age); sum(d$AGE > 70)
+moy_age <- tapply(d$SAL_HOR, cl_age, mean); moy_age; diff(moy_age)
+tapply(d$SAL_HOR, cl_age, median); range(d$AGE[d$AGE > 60])
+centres_age <- c(15, 25, 35, 45, 55, 70)   # milieux des tranches (extrêmes : milieux de ]10;20] et ]60;80])
+bornes_age <- c(min(d$AGE), 20, 30, 40, 50, 60, max(d$AGE))
+segments(bornes_age[-7], moy_age, bornes_age[-1], moy_age, col = "#0072B2", lwd = 3)
+lines(centres_age, moy_age, col = "#009E73", lwd = 2, lty = 2, type = "b", pch = 17)
+legend("topleft", c("Moyenne par tranche", "Courbe reliant les moyennes"), col = c("#0072B2", "#009E73"),
+       lwd = c(3, 2), lty = c(1, 2), pch = c(NA, 17), bty = "n", cex = 0.7)
 dev.off()
 cor(d$AGE, d$SAL_HOR)
 
