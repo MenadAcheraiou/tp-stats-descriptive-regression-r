@@ -11,7 +11,7 @@ Convention : `S<phase>.<n°>` · (Qn) = numéro de question du sujet · `→` = 
 
 ## Phase 0 — Préparation
 - [x] **S0.01** Relire le sujet et lister les contraintes (20 p. max, PDF, script exécutable, déclaration IA). → liste validée à deux · ✔ rien d'omis par rapport à `TPMLSD.pdf`
-- [ ] **S0.02** Installer/vérifier R (+ `MASS`, `ggplot2`/`dplyr` si utilisés) et lancer les deux scripts existants tels quels. → état de référence · ✔ `Rscript tp_partie1.R` et `tp_partie2.R` tournent sans erreur
+- [x] **S0.02** Installer/vérifier R (+ `MASS`, `ggplot2`/`dplyr` si utilisés) et lancer les deux scripts existants tels quels. → état de référence · ✔ `Rscript tp_partie1.R` et `tp_partie2.R` tournent sans erreur
 - [x] **S0.03** Choisir le format du rapport (`.Rmd` ou `.qmd` rendu en PDF, ou Word/LaTeX exporté en PDF) et fixer le gabarit. → squelette vide qui compile en PDF · ✔ PDF généré avec page de garde et sommaire
 - [ ] **S0.04** Répartir le travail entre les deux membres du binôme. → qui fait quoi · ✔ chacun peut expliquer toutes les parties à la fin
 
@@ -53,31 +53,31 @@ Convention : `S<phase>.<n°>` · (Qn) = numéro de question du sujet · `→` = 
 - [ ] **S1.26** (Q26, optionnel) Comparaison avec un indicateur récent BLS/Census (définitions, champ, unité, période). → à décider ensemble · ✔ si retenu : source citée et comparabilité discutée
 
 ## Phase 2 — Partie 2 : Boston
-- [ ] **S2.01** (Q1) Nuage `medv` en fonction de `lstat` et description (sens, intensité, non-linéarité). → figure + commentaire · ✔ unités sur les axes
-- [ ] **S2.02** (Q2) Droite des moindres carrés : formules du cours puis `lm()`/`summary()`, `abline()`, interprétation pente et ordonnée. → coefficients + figure · ✔ formules = `coef(lm)`
-- [ ] **S2.03** (Q3) Corrélation et R², signification et commentaire. → valeurs + texte · ✔ R² = r²
-- [ ] **S2.04** (Q4) `cor.test()` à 5 % : hypothèses, statistique, p-valeur, conclusion non causale. → paragraphe · ✔ H0/H1 écrites
-- [ ] **S2.05** (Q5) Valeurs ajustées `fitted()` vs observées. → extrait + explication · ✔ lien avec la droite
-- [ ] **S2.06** (Q6) Résidus : histogramme, boxplot, nuage avec ± 2 sd, `sd(residuals(m))` vs `sigma(m)`. → figure + explication · ✔ différence de dénominateur (n−1 vs n−2) expliquée
-- [ ] **S2.07** (Q7) Prévision avec `predict()` pour une valeur de `lstat` choisie. → valeur choisie + prévision · ✔ interprétation en k$, dans le domaine observé
-- [ ] **S2.08** (Q8) Régressogramme : `cut()` en 6 classes, moyennes, fonction constante par morceaux, courbe reliant les moyennes (abscisses des classes extrêmes justifiées), comparaison à la droite. → figure · ✔ effectifs par classe donnés
-- [ ] **S2.09** (Q9) Polynômes degrés 2, 3, 4 : R², courbes, évolution ; pourquoi un R² plus élevé ne garantit pas une meilleure prévision. → tableau + figure · ✔ R² croissants vérifiés
-- [ ] **S2.10** (Q10) `AIC()` des 4 modèles, choix argumenté (pas seulement le plus petit AIC). → tableau + justification · ✔ complexité et graphiques pris en compte
+- [x] **S2.01** (Q1) Nuage `medv` en fonction de `lstat` et description (sens, intensité, non-linéarité). → figure + commentaire · ✔ unités sur les axes
+- [x] **S2.02** (Q2) Droite des moindres carrés : formules du cours puis `lm()`/`summary()`, `abline()`, interprétation pente et ordonnée. → coefficients + figure · ✔ formules = `coef(lm)`
+- [x] **S2.03** (Q3) Corrélation et R², signification et commentaire. → valeurs + texte · ✔ R² = r²
+- [x] **S2.04** (Q4) `cor.test()` à 5 % : hypothèses, statistique, p-valeur, conclusion non causale. → paragraphe · ✔ H0/H1 écrites
+- [x] **S2.05** (Q5) Valeurs ajustées `fitted()` vs observées. → extrait + explication · ✔ lien avec la droite
+- [x] **S2.06** (Q6) Résidus : histogramme, boxplot, nuage avec ± 2 sd, `sd(residuals(m))` vs `sigma(m)`. → figure + explication · ✔ différence de dénominateur (n−1 vs n−2) expliquée
+- [x] **S2.07** (Q7) Prévision avec `predict()` pour une valeur de `lstat` choisie. → valeur choisie + prévision · ✔ interprétation en k$, dans le domaine observé
+- [x] **S2.08** (Q8) Régressogramme : `cut()` en 6 classes, moyennes, fonction constante par morceaux, courbe reliant les moyennes (abscisses des classes extrêmes justifiées), comparaison à la droite. → figure · ✔ effectifs par classe donnés
+- [x] **S2.09** (Q9) Polynômes degrés 2, 3, 4 : R², courbes, évolution ; pourquoi un R² plus élevé ne garantit pas une meilleure prévision. → tableau + figure · ✔ R² croissants vérifiés
+- [x] **S2.10** (Q10) `AIC()` des 4 modèles, choix argumenté (pas seulement le plus petit AIC). → tableau + justification · ✔ complexité et graphiques pris en compte
 
 ## Phase 3 — Rédaction du rapport
-- [ ] **S3.01** Choisir les résultats essentiels à garder dans le rapport (le reste va en annexe). → liste tableaux/figures retenus · ✔ budget de pages estimé ≤ 20
+- [x] **S3.01** Choisir les résultats essentiels à garder dans le rapport (le reste va en annexe). → liste tableaux/figures retenus · ✔ budget de pages estimé ≤ 20
 - [ ] **S3.02** Page de garde, sommaire et déclaration d'usage de l'IA (outil + nature exacte de l'aide). → pages 1–2 · ✔ déclaration conforme à [[TP/Déclaration IA]]
-- [ ] **S3.03** Introduction (objectif, deux jeux de données, plan). → ~0,5 p. · ✔ contexte historique 2012 et 1970 rappelé
-- [ ] **S3.04** Données et méthodes (fonctions R, règles de qualité, population analysée). → section · ✔ cohérent avec le script
+- [x] **S3.03** Introduction (objectif, deux jeux de données, plan). → ~0,5 p. · ✔ contexte historique 2012 et 1970 rappelé
+- [x] **S3.04** Données et méthodes (fonctions R, règles de qualité, population analysée). → section · ✔ cohérent avec le script
 - [x] **S3.05** Résultats commentés, Partie 1. → section · ✔ figures/tableaux numérotés, titrés, avec unités, commentés
-- [ ] **S3.06** Résultats commentés, Partie 2. → section · ✔ idem
-- [ ] **S3.07** Discussion critique (limites, causalité, données anciennes, variables omises). → section · ✔ aucune phrase causale
-- [ ] **S3.08** Conclusion et bibliographie. → fin du rapport · ✔ sources citées
+- [x] **S3.06** Résultats commentés, Partie 2. → section · ✔ idem
+- [x] **S3.07** Discussion critique (limites, causalité, données anciennes, variables omises). → section · ✔ aucune phrase causale
+- [x] **S3.08** Conclusion et bibliographie. → fin du rapport · ✔ sources citées
 - [ ] **S3.09** Annexes (sorties complémentaires, éventuellement script). → annexes · ✔ hors des 20 pages
 
 ## Phase 4 — Vérifications finales
-- [ ] **S4.01** Faire tourner le script de bout en bout dans une session R propre. → script sans erreur · ✔ toutes les figures et tables du rapport sont régénérées
+- [x] **S4.01** Faire tourner le script de bout en bout dans une session R propre. → script sans erreur · ✔ toutes les figures et tables du rapport sont régénérées
 - [ ] **S4.02** Relecture croisée du script et du rapport (skills `code-review` / `final-review`), simplification (`ponytail`). → corrections · ✔ pas de code mort, chiffres du texte = sorties du script
-- [ ] **S4.03** Contrôle du PDF (nombre de pages ≤ 20 hors annexes, mise en page). → PDF final · ✔ pages comptées
+- [x] **S4.03** Contrôle du PDF (nombre de pages ≤ 20 hors annexes, mise en page). → PDF final · ✔ pages comptées
 - [ ] **S4.04** Chacun s'entraîne à expliquer méthodes, script, résultats. → ✔ question-réponse à deux
 - [ ] **S4.05** Dépôt sur Moodle ou envoi à l'enseignant. → ✔ accusé de dépôt
