@@ -50,7 +50,7 @@ Convention : `S<phase>.<n°>` · (Qn) = numéro de question du sujet · `→` = 
 ### 1.5 Recul critique
 - [x] **S1.24** (Q24) Différence observée ≠ discrimination ni causalité ; deux variables de contexte. → paragraphe · ✔ aucune phrase causale
 - [x] **S1.25** (Q25) REV_FOYER : ce que permettent les classes, ce qu'elles empêchent de calculer ; trou entre classes 5 et 6 signalé et vérifié, pas corrigé. → paragraphe · ✔ vérification faite sur les données et le dictionnaire
-- [ ] **S1.26** (Q26, optionnel) Comparaison avec un indicateur récent BLS/Census (définitions, champ, unité, période). → à décider ensemble · ✔ si retenu : source citée et comparabilité discutée
+- [x] **S1.26** (Q26, optionnel) Comparaison avec un indicateur récent BLS/Census (définitions, champ, unité, période). → à décider ensemble · ✔ si retenu : source citée et comparabilité discutée — fait le 2026-11-09 : BLS CES0500000003 + CPI-U, sous-section 2.3.1 du rapport
 
 ## Phase 2 — Partie 2 : Boston
 - [x] **S2.01** (Q1) Nuage `medv` en fonction de `lstat` et description (sens, intensité, non-linéarité). → figure + commentaire · ✔ unités sur les axes

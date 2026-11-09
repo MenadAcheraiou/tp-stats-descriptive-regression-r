@@ -575,9 +575,44 @@ vérifié les données : les `r length(t_rev)` classes sont toutes présentes, l
 des bornes du dictionnaire, peut-être d'une erreur de saisie que seul le dictionnaire complet de la CPS
 permettrait de trancher. Nous n'avons rien corrigé, puisque l'analyse n'utilise que les codes.
 
-Nous n'avons pas traité l'option de comparaison avec un indicateur récent du BLS ou du Census Bureau :
-elle supposerait de vérifier le champ, les définitions et la période, et nous avons
-préféré consacrer la place à l'analyse des données de 2012.
+### Comparaison avec un indicateur récent (option de la question 26)
+
+```{r bls}
+# Valeurs relevées sur FRED (Federal Reserve Bank of St. Louis), séries du BLS, consultées le 9/11/2026.
+# Salaire horaire moyen, tous salariés du secteur privé non agricole (CES, série CES0500000003),
+# dollars courants par heure, corrigé des variations saisonnières ; sept. 2026 provisoire.
+sal_bls <- c(juil2012 = 23.49, sept2026 = 37.86)
+# Indice des prix à la consommation CPI-U (série CPIAUCSL), base 100 en 1982-1984, corrigé des variations saisonnières.
+ipc <- c(juil2012 = 228.590, sept2026 = 336.298)
+r_sal <- sal_bls[2] / sal_bls[1]        # évolution en dollars courants
+r_ipc <- ipc[2] / ipc[1]                # évolution des prix
+sal_2012 <- sal_bls[2] / r_ipc          # salaire de sept. 2026 exprimé en dollars de juillet 2012
+r_cps <- mean(s) / sal_bls[1]           # moyenne de l'échantillon CPS / indicateur BLS de juillet 2012
+```
+
+Nous avons relevé un indicateur officiel du Bureau of Labor Statistics (BLS), le salaire horaire moyen de
+l'ensemble des salariés des entreprises privées non agricoles, issu de l'enquête *Current Employment Statistics*
+menée auprès des établissements. En dollars courants, il passe de `r fr(sal_bls[1], 2)` \$/h en juillet 2012 à
+`r fr(sal_bls[2], 2)` \$/h en septembre 2026, soit `r pc(r_sal - 1, 0)` % de plus. Ce n'est pas un gain de pouvoir
+d'achat : sur la même période, l'indice des prix à la consommation (CPI-U, du BLS) passe de `r fr(ipc[1], 3)` à
+`r fr(ipc[2], 3)`, soit un rapport de `r fr(r_ipc, 2)`. En divisant le salaire de 2026 par ce rapport, on obtient
+`r fr(sal_2012, 2)` \$ de juillet 2012 par heure, soit environ `r pc(sal_2012 / sal_bls[1] - 1, 0)` % de plus qu'en 2012.
+Les deux séries sont corrigées des variations saisonnières et prises aux mêmes mois. Le BLS révise ses valeurs
+après la première publication (celle de septembre 2026 est provisoire) : nous utilisons une seule version, celle
+en ligne le 9 novembre 2026, pour les deux dates.
+
+Ces chiffres ne se comparent pas directement à notre fichier. En juillet 2012, la moyenne de SAL_HOR est de
+`r fr(mean(s), 2)` \$/h (médiane `r fr(median(s), 0)` \$/h, n = `r n1`), soit `r fr(r_cps, 2)` fois l'indicateur du BLS du
+même mois. Les deux sources ne mesurent pas la même chose : d'un côté `r n1` personnes dont le mode de sélection
+n'est pas connu et qui déclarent un salaire horaire (en dollars de 2012, d'après le sujet) ; de
+l'autre, les salaires versés par les établissements à tous les salariés du privé non agricole, heures
+supplémentaires comprises. Le champ, la définition du salaire et la population diffèrent, et l'indicateur du BLS
+est une moyenne, qui se rapproche de notre moyenne et non de notre médiane. Cet écart de `r fr(mean(s), 2)` à
+`r fr(sal_bls[1], 2)` \$/h pour le même mois illustre ces différences : comparer `r fr(mean(s), 2)` à
+`r fr(sal_bls[2], 2)` \$/h mélangerait deux sources. La comparaison porte donc seulement sur l'évolution de
+l'indicateur du BLS. Celle-ci reste une moyenne nationale, qui dépend aussi de l'évolution de la composition de
+l'emploi ; elle ne dit rien des personnes de notre échantillon et ne s'interprète pas comme un effet causal.
+Nous n'avons pas fusionné les deux jeux de données.
 
 
 
@@ -864,6 +899,11 @@ historiques de 1970 et 2012 et ne se transposent pas à la situation actuelle.
   TP de statistique descriptive sur l'enquête CPS, juillet 2012).
 - U.S. Census Bureau et Bureau of Labor Statistics, *Current Population Survey* (source de l'enquête de juillet 2012
   dont est tiré `Recensement.txt`).
+- U.S. Bureau of Labor Statistics, séries CES0500000003 (*Average Hourly Earnings of All Employees, Total Private*,
+  enquête *Current Employment Statistics*, \$/h) et CPIAUCSL (série BLS CUSR0000SA0, *Consumer Price Index for All Urban Consumers: All Items
+  in U.S. City Average*, base 100 en 1982-1984), corrigées des variations saisonnières, consultées le
+  9 novembre 2026 sur FRED (Federal Reserve Bank of St. Louis) :
+  <https://fred.stlouisfed.org/series/CES0500000003> et <https://fred.stlouisfed.org/series/CPIAUCSL>.
 - Harrison D. et Rubinfeld D. L. (1978), « Hedonic prices and the demand for clean air », *Journal of Environmental
   Economics and Management*, 5, 81-102 (origine du jeu de données `Boston`).
 - Venables W. N. et Ripley B. D. (2002), *Modern Applied Statistics with S*, 4e éd., Springer (package `MASS`).

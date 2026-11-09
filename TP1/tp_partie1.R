@@ -205,3 +205,12 @@ aggregate(SAL_HOR ~ SYNDICAT + CATEGORIE, d3, function(x) round(c(n = length(x),
 stopifnot(setequal(unique(d$REV_FOYER), 1:16))
 table(d$REV_FOYER)
 round(100 * prop.table(table(d$REV_FOYER)), 1)
+
+# ---- Option Q26 : indicateur récent du BLS (comparaison descriptive, sources non fusionnées) ----
+# Valeurs relevées sur FRED (séries BLS), consultées le 9/11/2026 : salaire horaire moyen, tous salariés du
+# privé non agricole (CES0500000003, $ courants/h, CVS ; sept. 2026 provisoire) et CPI-U (CPIAUCSL, base 100 en 1982-84, CVS).
+sal_bls <- c(juil2012 = 23.49, sept2026 = 37.86)
+ipc <- c(juil2012 = 228.590, sept2026 = 336.298)
+round(c(sal = sal_bls[2] / sal_bls[1], prix = ipc[2] / ipc[1]), 2)  # x 1,61 en $ courants ; prix x 1,47
+round(sal_bls / (ipc / ipc[1]), 2)        # en $ de juillet 2012 : 23,49 puis 25,73 (environ + 10 %)
+round(mean(d$SAL_HOR) / sal_bls[1], 2)    # moyenne CPS 2012 / indicateur BLS 2012 : champs différents
